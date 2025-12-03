@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, useScroll, useTransform } from "framer-motion"
+import { motion, useTransform, useMotionValue } from "framer-motion"
 import { useEffect, useState } from "react"
 
 type TherapyMode = "default" | "calm" | "energy" | "balance" | "healing"
@@ -19,13 +19,31 @@ const leafColors = {
 
 export default function GrassParallax({ mode }: GrassParallaxProps) {
   const [isLoaded, setIsLoaded] = useState(false)
-  const { scrollY } = useScroll()
+  const scrollY = useMotionValue(0)
 
-  // Multiple parallax layers with different speeds
-  // Increased values make leaves fall DOWN more dramatically when scrolling down
-  const y1 = useTransform(scrollY, [0, 800], [0, 150])  // Slow fall
-  const y2 = useTransform(scrollY, [0, 800], [0, 250])  // Medium fall
-  const y3 = useTransform(scrollY, [0, 800], [0, 350])  // Fast fall
+  // Manual scroll tracking
+  useEffect(() => {
+    const handleScroll = () => {
+      scrollY.set(window.scrollY)
+    }
+    
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [scrollY])
+
+
+  const xLeft1 = useTransform(scrollY, [0, 500], [0, -150])   
+  const xLeft2 = useTransform(scrollY, [0, 500], [0, -250])   
+  const xLeft3 = useTransform(scrollY, [0, 500], [0, -350])   
+  
+  const xRight1 = useTransform(scrollY, [0, 500], [0, 150])   
+  const xRight2 = useTransform(scrollY, [0, 500], [0, 250])   
+  const xRight3 = useTransform(scrollY, [0, 500], [0, 350])   
+
+  // Center leaves - minimal movement
+  const xCenter1 = useTransform(scrollY, [0, 500], [0, -30])
+  const xCenter2 = useTransform(scrollY, [0, 500], [0, 0])
+  const xCenter3 = useTransform(scrollY, [0, 500], [0, 30])
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 100)
@@ -34,39 +52,39 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
 
   const colors = leafColors[mode]
 
-  // Generate leaves spread across the bottom
+
   const leaves = [
-    { x: "0%", offset: 0, size: 200, rotation: -15, color: colors.dark, layer: y1, delay: 0.1 },
-    { x: "5%", offset: 10, size: 170, rotation: -20, color: colors.primary, layer: y2, delay: 0.2 },
-    { x: "8%", offset: 5, size: 150, rotation: -10, color: colors.secondary, layer: y3, delay: 0.3 },
+    { x: "0%", offset: 0, size: 200, rotation: -15, color: colors.dark, xLayer: xLeft3, delay: 0.1 },
+    { x: "5%", offset: 10, size: 170, rotation: -20, color: colors.primary, xLayer: xLeft3, delay: 0.2 },
+    { x: "8%", offset: 5, size: 150, rotation: -10, color: colors.secondary, xLayer: xLeft2, delay: 0.3 },
     
     // Left quarter
-    { x: "15%", offset: 0, size: 180, rotation: -12, color: colors.primary, layer: y1, delay: 0.15 },
-    { x: "20%", offset: 8, size: 160, rotation: -18, color: colors.dark, layer: y2, delay: 0.25 },
-    { x: "25%", offset: 0, size: 190, rotation: -8, color: colors.secondary, layer: y1, delay: 0.35 },
+    { x: "15%", offset: 0, size: 180, rotation: -12, color: colors.primary, xLayer: xLeft2, delay: 0.15 },
+    { x: "20%", offset: 8, size: 160, rotation: -18, color: colors.dark, xLayer: xLeft2, delay: 0.25 },
+    { x: "25%", offset: 0, size: 190, rotation: -8, color: colors.secondary, xLayer: xLeft1, delay: 0.35 },
     
     // Center left
-    { x: "32%", offset: 5, size: 175, rotation: -5, color: colors.primary, layer: y3, delay: 0.2 },
-    { x: "38%", offset: 0, size: 185, rotation: -10, color: colors.dark, layer: y1, delay: 0.3 },
+    { x: "32%", offset: 5, size: 175, rotation: -5, color: colors.primary, xLayer: xLeft1, delay: 0.2 },
+    { x: "38%", offset: 0, size: 185, rotation: -10, color: colors.dark, xLayer: xLeft1, delay: 0.3 },
     
-    // Center
-    { x: "45%", offset: 0, size: 200, rotation: 0, color: colors.primary, layer: y2, delay: 0.25 },
-    { x: "50%", offset: 8, size: 195, rotation: 3, color: colors.dark, layer: y1, delay: 0.35 },
-    { x: "55%", offset: 0, size: 185, rotation: -3, color: colors.secondary, layer: y2, delay: 0.4 },
+    // Center - minimal horizontal movement
+    { x: "45%", offset: 0, size: 200, rotation: 0, color: colors.primary, xLayer: xCenter1, delay: 0.25 },
+    { x: "50%", offset: 8, size: 195, rotation: 3, color: colors.dark, xLayer: xCenter2, delay: 0.35 },
+    { x: "55%", offset: 0, size: 185, rotation: -3, color: colors.secondary, xLayer: xCenter3, delay: 0.4 },
     
     // Center right
-    { x: "62%", offset: 5, size: 175, rotation: 5, color: colors.primary, layer: y3, delay: 0.3 },
-    { x: "68%", offset: 0, size: 190, rotation: 8, color: colors.dark, layer: y1, delay: 0.45 },
+    { x: "62%", offset: 5, size: 175, rotation: 5, color: colors.primary, xLayer: xRight1, delay: 0.3 },
+    { x: "68%", offset: 0, size: 190, rotation: 8, color: colors.dark, xLayer: xRight1, delay: 0.45 },
     
     // Right quarter
-    { x: "75%", offset: 0, size: 180, rotation: 12, color: colors.secondary, layer: y2, delay: 0.35 },
-    { x: "80%", offset: 8, size: 160, rotation: 18, color: colors.primary, layer: y3, delay: 0.5 },
-    { x: "85%", offset: 0, size: 170, rotation: 10, color: colors.dark, layer: y1, delay: 0.4 },
+    { x: "75%", offset: 0, size: 180, rotation: 12, color: colors.secondary, xLayer: xRight1, delay: 0.35 },
+    { x: "80%", offset: 8, size: 160, rotation: 18, color: colors.primary, xLayer: xRight2, delay: 0.5 },
+    { x: "85%", offset: 0, size: 170, rotation: 10, color: colors.dark, xLayer: xRight2, delay: 0.4 },
     
     // Far right
-    { x: "92%", offset: 5, size: 150, rotation: 10, color: colors.secondary, layer: y2, delay: 0.55 },
-    { x: "95%", offset: 10, size: 170, rotation: 20, color: colors.primary, layer: y3, delay: 0.6 },
-    { x: "100%", offset: 0, size: 200, rotation: 15, color: colors.dark, layer: y1, delay: 0.5 },
+    { x: "92%", offset: 5, size: 150, rotation: 10, color: colors.secondary, xLayer: xRight2, delay: 0.55 },
+    { x: "95%", offset: 10, size: 170, rotation: 20, color: colors.primary, xLayer: xRight3, delay: 0.6 },
+    { x: "100%", offset: 0, size: 200, rotation: 15, color: colors.dark, xLayer: xRight3, delay: 0.5 },
   ]
 
   return (
@@ -75,7 +93,7 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
         <motion.div
           key={index}
           style={{ 
-            y: leaf.layer,
+            x: leaf.xLayer,  // Horizontal parallax ONLY
             left: leaf.x,
             bottom: `${leaf.offset}px`,
           }}
@@ -87,7 +105,6 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
               y: isLoaded ? 0 : 100, 
               opacity: isLoaded ? (0.7 + Math.random() * 0.3) : 0,
               scale: isLoaded ? 1 : 0.8,
-              x: isLoaded ? [0, 10, -10, 0] : 0,  // Floating left-right
               rotate: isLoaded ? [0, 2, -2, 0] : 0,  // Slight rotation
             }}
             transition={{ 
@@ -96,11 +113,6 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
               type: "spring", 
               stiffness: 50,
               damping: 20,
-              x: {
-                repeat: Infinity,
-                duration: 3 + Math.random() * 2,
-                ease: "easeInOut",
-              },
               rotate: {
                 repeat: Infinity,
                 duration: 2.5 + Math.random() * 1.5,
@@ -120,6 +132,8 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
     </div>
   )
 }
+
+
 
 interface PalmLeafProps {
   color: string

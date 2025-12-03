@@ -28,7 +28,7 @@ export default function FeaturesSection() {
   }
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center px-4 sm:px-6 py-16 md:py-24 relative overflow-hidden">
+    <section className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center px-4 sm:px-6 py-16 md:py-24 relative overflow-hidden">
       {/* Background Decorative Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
         <div className="absolute top-1/4 left-1/6 w-64 h-64 rounded-full blur-3xl" style={{ backgroundColor: `${themeColors.primary}50` }} />
@@ -145,7 +145,7 @@ export default function FeaturesSection() {
             </div>
           </motion.div>
 
-          {/* Diagnosa Feature - Large Card */}
+          {/* Diagnosa Feature*/}
           <motion.div
             variants={itemVariants}
             className="md:col-span-6 bg-white rounded-3xl p-6 sm:p-8 md:p-10 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 group relative overflow-hidden"

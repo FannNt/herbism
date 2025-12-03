@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import GrassParallax from "./GrassParallax"
+// import CloudParallax from "./CloudParallax"
 import { useTheme } from "../context/ThemeContext"
 
 type TherapyMode = "default" | "calm" | "energy" | "balance" | "healing"
@@ -63,8 +64,6 @@ export default function HeroPage() {
     <div
       className={`min-h-screen bg-gradient-to-br ${currentTheme.bg} relative overflow-hidden overflow-x-hidden transition-all duration-1000 ease-in-out pt-16 md:pt-0`}
     >
-      {/* Grass Parallax Effect */}
-      <GrassParallax mode={currentMode} />
 
       <motion.div
         className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6"
@@ -133,6 +132,11 @@ export default function HeroPage() {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Grass Parallax Effect */}
+      <div className="absolute bottom-0 left-0 w-full z-20">
+        <GrassParallax mode={currentMode} />
+      </div>
     </div>
   )
 }

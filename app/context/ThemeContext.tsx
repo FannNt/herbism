@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
 type TherapyMode = "default" | "calm" | "energy" | "balance" | "healing"
 
@@ -56,12 +56,33 @@ const themeColors = {
   },
 }
 
+const THEME_STORAGE_KEY = "herbism-theme-mode"
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [currentMode, setCurrentMode] = useState<TherapyMode>("default")
+  const [currentMode, setCurrentModeState] = useState<TherapyMode>("default")
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as TherapyMode | null
+    if (savedTheme && themeColors[savedTheme]) {
+      setCurrentModeState(savedTheme)
+    }
+    setIsInitialized(true)
+  }, [])
+
+  // Save theme to localStorage 
+  const setCurrentMode = (mode: TherapyMode) => {
+    setCurrentModeState(mode)
+    localStorage.setItem(THEME_STORAGE_KEY, mode)
+  }
 
   const getThemeColors = () => themeColors[currentMode]
+
+  if (!isInitialized) {
+    return null
+  }
 
   return (
     <ThemeContext.Provider value={{ currentMode, setCurrentMode, getThemeColors }}>

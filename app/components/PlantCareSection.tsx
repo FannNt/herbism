@@ -29,7 +29,7 @@ export default function PlantCareSection() {
   }
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center px-4 sm:px-6 py-16 md:py-24 relative overflow-hidden">
+    <section className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center px-4 sm:px-6 py-16 md:py-24 relative overflow-hidden">
 
 
       <motion.div
