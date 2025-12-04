@@ -4,18 +4,22 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useTheme } from "../context/ThemeContext"
-import { Home, MessageCircle, ScanLine, Sprout, Users, User, Leaf, ShieldAlert } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
+import { logout } from "@/services/authService"
+import { Home, MessageCircle, ScanLine, Sprout, Users, User, Leaf, ShieldAlert, LogOut, Settings } from "lucide-react"
 import HerbismLogo from "./HerbismLogo"
 
 export default function Navbar() {
+  const router = useRouter()
+  const { user, loading } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState("home")
   const [showScanDropdown, setShowScanDropdown] = useState(false)
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showMobileScanMenu, setShowMobileScanMenu] = useState(false)
   const [showMobileAkunMenu, setShowMobileAkunMenu] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false) // Simulate login state
-  const [userName, setUserName] = useState("") // User name when logged in
   const { scrollY } = useScroll()
   const navbarOpacity = useTransform(scrollY, [0, 100], [0.95, 1])
   const { getThemeColors } = useTheme()
@@ -63,7 +67,6 @@ export default function Navbar() {
     setActiveSection(sectionId)
     setShowMobileScanMenu(false)
     setShowMobileAkunMenu(false)
-    // Implement scroll logic here
   }
 
   const themeColors = getThemeColors()
@@ -139,7 +142,6 @@ export default function Navbar() {
                       <span className="text-base">{item.label}</span>
                     </span>
                   </motion.button>
-
                   {/* Dropdown Menu Desktop */}
                   {item.hasDropdown && (
                     <AnimatePresence>
@@ -188,31 +190,69 @@ export default function Navbar() {
                 </div>
               ))}
             </motion.div>
-
             {/* Account Desktop */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
+              className="relative"
+              onMouseEnter={() => user && setShowUserDropdown(true)}
+              onMouseLeave={() => setShowUserDropdown(false)}
             >
-              {isLoggedIn ? (
-                // User Buttotn
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => scrollToSection("akun")}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-all duration-300"
-                >
-                  <div 
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
-                    style={{ background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})` }}
+              {user ? (
+                <>
+                  {/* User Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-all duration-300"
                   >
-                    {userName ? userName.charAt(0).toUpperCase() : "U"}
-                  </div>
-                  <span className="text-sm font-medium text-slate-700">
-                    {userName || "User"}
-                  </span>
-                </motion.button>
+                    <span className="text-sm font-medium text-slate-700">
+                      {user.username || user.name || "User"}
+                    </span>
+                  </motion.button>
+                  {/* Dropdown Menu */}
+                  <AnimatePresence>
+                    {showUserDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute top-full mt-3 right-0 w-56 bg-white rounded-2xl shadow-2xl border-2 overflow-hidden"
+                        style={{ borderColor: `${themeColors.primary}25` }}
+                      >
+                        <div className="p-4 border-b" style={{ borderColor: `${themeColors.primary}15` }}>
+                          <p className="text-sm font-semibold text-slate-900">{user.name || user.username}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{user.email}</p>
+                        </div>                
+                        <div className="p-2">
+                          <Link href="/profile">
+                            <motion.button
+                              whileHover={{ x: 4 }}
+                              className="w-full px-4 py-3 flex items-center gap-3 rounded-xl transition-all duration-200 hover:bg-slate-50"
+                            >
+                              <User size={18} className="text-slate-600" />
+                              <span className="text-sm font-medium text-slate-700">Profil Saya</span>
+                            </motion.button>
+                          </Link>
+                          
+                          <motion.button
+                            whileHover={{ x: 4 }}
+                            onClick={async () => {
+                              await logout()
+                              router.push("/")
+                            }}
+                            className="w-full px-4 py-3 flex items-center gap-3 rounded-xl transition-all duration-200 hover:bg-red-50"
+                          >
+                            <LogOut size={18} className="text-red-600" />
+                            <span className="text-sm font-medium text-red-600">Keluar</span>
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
               ) : (
                 // Login/Register Buttons
                 <div className="flex items-center gap-3">

@@ -21,7 +21,7 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const scrollY = useMotionValue(0)
 
-  // Manual scroll tracking
+  // Manual scroll 
   useEffect(() => {
     const handleScroll = () => {
       scrollY.set(window.scrollY)
@@ -56,12 +56,11 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
   const leaves = [
     { x: "0%", offset: 0, size: 200, rotation: -15, color: colors.dark, xLayer: xLeft3, delay: 0.1 },
     { x: "5%", offset: 10, size: 170, rotation: -20, color: colors.primary, xLayer: xLeft3, delay: 0.2 },
-    { x: "8%", offset: 5, size: 150, rotation: -10, color: colors.secondary, xLayer: xLeft2, delay: 0.3 },
     
     // Left quarter
     { x: "15%", offset: 0, size: 180, rotation: -12, color: colors.primary, xLayer: xLeft2, delay: 0.15 },
     { x: "20%", offset: 8, size: 160, rotation: -18, color: colors.dark, xLayer: xLeft2, delay: 0.25 },
-    { x: "25%", offset: 0, size: 190, rotation: -8, color: colors.secondary, xLayer: xLeft1, delay: 0.35 },
+
     
     // Center left
     { x: "32%", offset: 5, size: 175, rotation: -5, color: colors.primary, xLayer: xLeft1, delay: 0.2 },
@@ -70,7 +69,7 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
     // Center - minimal horizontal movement
     { x: "45%", offset: 0, size: 200, rotation: 0, color: colors.primary, xLayer: xCenter1, delay: 0.25 },
     { x: "50%", offset: 8, size: 195, rotation: 3, color: colors.dark, xLayer: xCenter2, delay: 0.35 },
-    { x: "55%", offset: 0, size: 185, rotation: -3, color: colors.secondary, xLayer: xCenter3, delay: 0.4 },
+
     
     // Center right
     { x: "62%", offset: 5, size: 175, rotation: 5, color: colors.primary, xLayer: xRight1, delay: 0.3 },
@@ -79,12 +78,12 @@ export default function GrassParallax({ mode }: GrassParallaxProps) {
     // Right quarter
     { x: "75%", offset: 0, size: 180, rotation: 12, color: colors.secondary, xLayer: xRight1, delay: 0.35 },
     { x: "80%", offset: 8, size: 160, rotation: 18, color: colors.primary, xLayer: xRight2, delay: 0.5 },
-    { x: "85%", offset: 0, size: 170, rotation: 10, color: colors.dark, xLayer: xRight2, delay: 0.4 },
+
     
     // Far right
     { x: "92%", offset: 5, size: 150, rotation: 10, color: colors.secondary, xLayer: xRight2, delay: 0.55 },
     { x: "95%", offset: 10, size: 170, rotation: 20, color: colors.primary, xLayer: xRight3, delay: 0.6 },
-    { x: "100%", offset: 0, size: 200, rotation: 15, color: colors.dark, xLayer: xRight3, delay: 0.5 },
+
   ]
 
   return (

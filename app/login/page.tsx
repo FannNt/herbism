@@ -3,34 +3,71 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 import { ThemeProvider } from "../context/ThemeContext";
 import HerbismLogo from "../components/HerbismLogo";
+import CustomPopup from "../components/CustomPopup";
+import { usePopup } from "../hooks/usePopup";
 import { login, signInWithGoogle } from "@/services/authService";
 
 function LoginContent() {
+  const router = useRouter();
+  const { popupState, closePopup, showSuccess, showError } = usePopup();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { getThemeColors } = useTheme();
   const themeColors = getThemeColors();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      login(email, password);
+      await login(email, password);
+      showSuccess(
+        "Login Berhasil!",
+        "Selamat datang kembali di Herbism!",
+        1500
+      );
+      setTimeout(() => {
+        router.push("/");
+      }, 1500);
     } catch (err) {
-      alert(err);
+      showError(
+        "Login Gagal",
+        err instanceof Error ? err.message : "Email atau password salah. Silakan coba lagi."
+      );
     }
   };
 
   const handleSignInWithGoogle = async (e: React.FormEvent) => {
-    e.preventDefault;
+    e.preventDefault();
     try {
       const result = await signInWithGoogle();
-      // result ada isNewUsernya, bisa nentuin nih user baru mulai ato gmn?
+      // Check if new user to determine redirect
+      if (result.isNewUser) {
+        showSuccess(
+          "Selamat Datang!",
+          "Akun Google Anda berhasil terhubung. Mari lengkapi profil Anda.",
+          2000
+        );
+        setTimeout(() => {
+          router.push("/onboarding");
+        }, 2000);
+      } else {
+        showSuccess(
+          "Login Berhasil!",
+          "Selamat datang kembali!",
+          1500
+        );
+        setTimeout(() => {
+          router.push("/");
+        }, 1500);
+      }
     } catch (err) {
-      // Ganti PopUp ya lang pls...
-      alert(err);
+      showError(
+        "Login Google Gagal",
+        err instanceof Error ? err.message : "Terjadi kesalahan saat login dengan Google. Silakan coba lagi."
+      );
     }
   };
 
@@ -272,6 +309,21 @@ function LoginContent() {
           </motion.div>
         </Link>
       </motion.div>
+
+      {/* Custom Popup */}
+      <CustomPopup
+        isOpen={popupState.isOpen}
+        onClose={closePopup}
+        type={popupState.type}
+        title={popupState.title}
+        message={popupState.message}
+        confirmText={popupState.confirmText}
+        cancelText={popupState.cancelText}
+        onConfirm={popupState.onConfirm}
+        onCancel={popupState.onCancel}
+        showCancel={popupState.showCancel}
+        autoClose={popupState.autoClose}
+      />
     </div>
   );
 }

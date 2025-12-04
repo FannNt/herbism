@@ -3,17 +3,19 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 import { ThemeProvider } from "../context/ThemeContext";
 import HerbismLogo from "../components/HerbismLogo";
+import CustomPopup from "../components/CustomPopup";
+import { usePopup } from "../hooks/usePopup";
 import { register, signInWithGoogle } from "@/services/authService";
 
 function RegisterContent() {
+  const router = useRouter();
+  const { popupState, closePopup, showSuccess, showError } = usePopup();
   const [formData, setFormData] = useState({
-    username: "", // unused
-    name: "", // unused
     email: "",
-    city: "", // unused
     password: "",
     confirmPassword: "",
   });
@@ -22,23 +24,73 @@ function RegisterContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate password match
+    if (formData.password !== formData.confirmPassword) {
+      showError(
+        "Password Tidak Cocok",
+        "Password dan konfirmasi password harus sama. Silakan periksa kembali."
+      );
+      return;
+    }
+
+    // Validate password length
+    if (formData.password.length < 8) {
+      showError(
+        "Password Terlalu Pendek",
+        "Password harus minimal 8 karakter untuk keamanan akun Anda."
+      );
+      return;
+    }
+
     try {
       await register(formData.email, formData.password);
-      // Redirect ke Onboarding. Yaps
+      showSuccess(
+        "Registrasi Berhasil!",
+        "Akun Anda telah dibuat. Silakan lengkapi profil Anda.",
+        2000
+      );
+      // Redirect to onboarding after 2 seconds
+      setTimeout(() => {
+        router.push("/onboarding");
+      }, 2000);
     } catch (err) {
-      // Buat popup pls...
-      alert(err);
+      showError(
+        "Registrasi Gagal",
+        err instanceof Error ? err.message : "Terjadi kesalahan saat membuat akun. Silakan coba lagi."
+      );
     }
   };
 
   const handleSignInWithGoogle = async (e: React.FormEvent) => {
-    e.preventDefault;
+    e.preventDefault();
     try {
       const result = await signInWithGoogle();
-      // result ada isNewUsernya, bisa nentuin nih user baru mulai ato gmn?
+      // Check if new user to determine redirect
+      if (result.isNewUser) {
+        showSuccess(
+          "Selamat Datang!",
+          "Akun Google Anda berhasil terhubung. Mari lengkapi profil Anda.",
+          2000
+        );
+        setTimeout(() => {
+          router.push("/onboarding");
+        }, 2000);
+      } else {
+        showSuccess(
+          "Login Berhasil!",
+          "Selamat datang kembali!",
+          1500
+        );
+        setTimeout(() => {
+          router.push("/");
+        }, 1500);
+      }
     } catch (err) {
-      // Ganti PopUp ya lang pls...
-      alert(err);
+      showError(
+        "Login Google Gagal",
+        err instanceof Error ? err.message : "Terjadi kesalahan saat login dengan Google. Silakan coba lagi."
+      );
     }
   };
 
@@ -105,92 +157,6 @@ function RegisterContent() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Username */}
-            <div className="relative">
-              <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">
-                Username
-              </label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-50/50 border border-slate-200/50 focus:outline-none transition-all duration-300 text-slate-900"
-                  onFocus={(e) => {
-                    e.target.style.borderColor = themeColors.primary;
-                    e.target.style.background = "white";
-                    e.target.style.boxShadow = `0 0 0 4px ${themeColors.primary}08`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "#e2e8f080";
-                    e.target.style.background = "#f8fafc80";
-                    e.target.style.boxShadow = "none";
-                  }}
-                  placeholder="Username"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Name */}
-            <div className="relative">
-              <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-50/50 border border-slate-200/50 focus:outline-none transition-all duration-300 text-slate-900"
-                  onFocus={(e) => {
-                    e.target.style.borderColor = themeColors.primary;
-                    e.target.style.background = "white";
-                    e.target.style.boxShadow = `0 0 0 4px ${themeColors.primary}08`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "#e2e8f080";
-                    e.target.style.background = "#f8fafc80";
-                    e.target.style.boxShadow = "none";
-                  }}
-                  placeholder="Nama"
-                  required
-                />
-              </div>
-            </div>
-
             {/* Email */}
             <div className="relative">
               <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">
@@ -456,6 +422,21 @@ function RegisterContent() {
           </motion.div>
         </Link>
       </motion.div>
+
+      {/* Custom Popup */}
+      <CustomPopup
+        isOpen={popupState.isOpen}
+        onClose={closePopup}
+        type={popupState.type}
+        title={popupState.title}
+        message={popupState.message}
+        confirmText={popupState.confirmText}
+        cancelText={popupState.cancelText}
+        onConfirm={popupState.onConfirm}
+        onCancel={popupState.onCancel}
+        showCancel={popupState.showCancel}
+        autoClose={popupState.autoClose}
+      />
     </div>
   );
 }

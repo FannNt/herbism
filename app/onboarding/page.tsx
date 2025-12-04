@@ -3,12 +3,19 @@
 import { motion, Variants } from "framer-motion"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "../context/AuthContext"
+import { completeOnboarding } from "@/services/userService"
+import { usePopup } from "../hooks/usePopup"
+import CustomPopup from "../components/CustomPopup"
+import { auth } from "@/lib/firebase"
 
-// Type definitions
+
 type Gender = "male" | "female"
 type ExperienceLevel = "beginner" | "intermediate" | "expert"
 
 interface ProfileFormData {
+  username: string
+  name: string
   age: number | ""
   gender: Gender | ""
   region: string
@@ -20,11 +27,15 @@ interface ProfileFormData {
 
 export default function CompleteProfilePage() {
   const router = useRouter()
+  const { popupState, closePopup, showSuccess, showError } = usePopup()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const primaryColor = "#10b981" // 
   
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState<ProfileFormData>({
+    username: "",
+    name: "",
     age: "",
     gender: "",
     region: "",
@@ -60,25 +71,54 @@ export default function CompleteProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
 
+    try {
+      const currentUser = auth.currentUser
+      if (!currentUser) {
+        showError("Error", "Anda harus login terlebih dahulu")
+        setIsSubmitting(false)
+        return
+      }
 
-    const finalData = {
-      ...formData,
-      healthCondition: formData.healthCondition === "Lainnya (tulis sendiri)" 
-        ? customHealthCondition 
-        : formData.healthCondition,
-      healthGoals: formData.healthGoals === "Lainnya (tulis sendiri)" 
-        ? customHealthGoal 
-        : formData.healthGoals,
-      allergies: formData.allergies === "Lainnya (tulis sendiri)" 
-        ? customAllergy 
-        : formData.allergies
+      const finalData = {
+        username: formData.username,
+        name: formData.name,
+        age: typeof formData.age === 'number' ? formData.age : undefined,
+        gender: formData.gender || undefined,
+        region: formData.region,
+        healthCondition: formData.healthCondition === "Lainnya (tulis sendiri)" 
+          ? customHealthCondition 
+          : formData.healthCondition,
+        healthGoals: formData.healthGoals === "Lainnya (tulis sendiri)" 
+          ? customHealthGoal 
+          : formData.healthGoals,
+        allergies: formData.allergies === "Lainnya (tulis sendiri)" 
+          ? customAllergy 
+          : formData.allergies,
+        experienceLevel: formData.experienceLevel || undefined
+      }
+
+      // Save to Firestore
+      await completeOnboarding(currentUser.uid, finalData)
+
+      showSuccess(
+        "Profil Lengkap!",
+        "Terima kasih! Profil Anda telah berhasil dilengkapi.",
+        2000
+      )
+
+      setTimeout(() => {
+        router.push("/")
+      }, 2000)
+    } catch (error) {
+      console.error("Error saving onboarding:", error)
+      showError(
+        "Gagal Menyimpan",
+        "Terjadi kesalahan saat menyimpan data. Silakan coba lagi."
+      )
+      setIsSubmitting(false)
     }
-
-    console.log("Profile data:", finalData)
-
-
-    router.push("/")
   }
 
   const nextStep = () => {
@@ -158,6 +198,36 @@ export default function CompleteProfilePage() {
             {step === 1 && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-medium text-slate-900 mb-6">Informasi Dasar</h2>
+                
+                {/* Username */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all"
+                    placeholder="Masukkan username Anda"
+                  />
+                </div>
+
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Nama Lengkap
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all"
+                    placeholder="Masukkan nama lengkap Anda"
+                  />
+                </div>
                 
                 {/* umur */}
                 <div>
@@ -411,7 +481,7 @@ export default function CompleteProfilePage() {
                   type="button"
                   onClick={nextStep}
                   disabled={
-                    (step === 1 && (!formData.age || !formData.gender || !formData.region)) ||
+                    (step === 1 && (!formData.username || !formData.name || !formData.age || !formData.gender || !formData.region)) ||
                     (step === 2 && !formData.healthCondition) ||
                     (step === 2 && formData.healthCondition === "Lainnya (tulis sendiri)" && !customHealthCondition) ||
                     (step === 3 && !formData.healthGoals) ||
@@ -450,6 +520,21 @@ export default function CompleteProfilePage() {
           </button>
         </div>
       </motion.div>
+
+      {/* Custom Popup */}
+      <CustomPopup
+        isOpen={popupState.isOpen}
+        onClose={closePopup}
+        type={popupState.type}
+        title={popupState.title}
+        message={popupState.message}
+        confirmText={popupState.confirmText}
+        cancelText={popupState.cancelText}
+        onConfirm={popupState.onConfirm}
+        onCancel={popupState.onCancel}
+        showCancel={popupState.showCancel}
+        autoClose={popupState.autoClose}
+      />
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
   getAdditionalUserInfo,
 } from "@firebase/auth";
 import { createProfile } from "./userService";
+import { getFirebaseErrorMessage } from "@/utils/firebaseErrors";
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
@@ -22,7 +23,7 @@ export async function signInWithGoogle() {
 
     return { user: result.user, isNewUser: info?.isNewUser };
   } catch (err) {
-    throw new Error(`Error happened: ${err}`);
+    throw new Error(getFirebaseErrorMessage(err));
   }
 }
 
@@ -32,15 +33,16 @@ export async function register(email: string, password: string) {
     await createProfile(result.user.uid, email);
     return result;
   } catch (err) {
-    throw new Error(`Error happened: ${err}`);
+    throw new Error(getFirebaseErrorMessage(err));
   }
 }
 
-export function login(email: string, password: string) {
+export async function login(email: string, password: string) {
   try {
-    signInWithEmailAndPassword(auth, email, password);
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result;
   } catch (err) {
-    throw new Error(`Error happened: ${err}`);
+    throw new Error(getFirebaseErrorMessage(err));
   }
 }
 
