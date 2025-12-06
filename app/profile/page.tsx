@@ -40,7 +40,7 @@ export default function ProfilePage() {
         {/* Back */}
         <div className="mb-6 flex items-center gap-4">
           <button 
-            onClick={() => router.push("/Home")}
+            onClick={() => router.push("/home")}
             className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-slate-700" />
@@ -159,6 +159,7 @@ export default function ProfilePage() {
                 <p className="text-sm font-semibold text-slate-900">Tanaman Herbal Saya</p>
               </div>
               <button 
+                onClick={() => router.push("/dashboardplant")}
                 className="px-3 py-1.5 text-white text-xs rounded-lg font-medium transition-colors flex items-center gap-1"
                 style={{ backgroundColor: themeColors.primary }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = themeColors.accent}

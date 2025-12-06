@@ -1,7 +1,7 @@
 "use client"
 import { motion, type Variants } from "framer-motion"
 import { useTheme } from "../context/ThemeContext"
-import { Sprout, Video} from "lucide-react"
+import { Sprout, Video, IdCard } from "lucide-react"
 
   export default function WirelessPlantSection() {
     const { getThemeColors } = useTheme()
@@ -48,8 +48,8 @@ import { Sprout, Video} from "lucide-react"
           viewport={{ once: true }}
           className="max-w-7xl mx-auto w-full relative z-10"
         >
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4 auto-rows-max">
-            <motion.div variants={itemVariants} className="col-span-1 md:col-span-4 lg:col-span-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-max">
+            <motion.div variants={itemVariants} className="col-span-1 md:col-span-2 lg:col-span-4">
               <div className="text-center md:col-span-12 bg-white/100 rounded-[2.5rem] p-8 md:p-10 shadow-lg text-white relative overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
@@ -68,29 +68,25 @@ import { Sprout, Video} from "lucide-react"
                 </p>
               </div>
             </motion.div>
-
-
             <motion.div
               variants={itemVariants}
               whileHover={{ scale: 1.02 }}
-              className="col-span-1 md:col-span-2 lg:col-span-3 row-span-2 bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 group relative"
+              className="col-span-1 row-span-1 bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 group relative"
             >
               <img
-                src="/Wireless.png"
-                alt="Wireless Plant Community"
+                src="/Wireless2.png"
+                alt="Wireless Plant System"
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div
                 className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{ background: `linear-gradient(to top, ${themeColors.primary}40, transparent)` }}
+                style={{ background: `linear-gradient(to top, ${themeColors.secondary}40, transparent)` }}
               />
             </motion.div>
-
-      
             <motion.div
               variants={itemVariants}
               whileHover={{ y: -4 }}
-              className="col-span-1 md:col-span-2 lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
+              className="col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
             >
               <div>
                 <div
@@ -110,7 +106,7 @@ import { Sprout, Video} from "lucide-react"
             <motion.div
               variants={itemVariants}
               whileHover={{ y: -4 }}
-              className="col-span-1 md:col-span-2 lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
+              className="col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
             >
               <div>
                 <div
@@ -126,26 +122,27 @@ import { Sprout, Video} from "lucide-react"
               </div>
             </motion.div>
 
-
             <motion.div
               variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className="col-span-1 md:col-span-2 lg:col-span-2 bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 group relative"
+              whileHover={{ y: -4 }}
+              className="col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
             >
-              <img
-                src="/Wireless2.png"
-                alt="Wireless Plant System"
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{ background: `linear-gradient(to top, ${themeColors.secondary}40, transparent)` }}
-              />
+              <div>
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                  style={{ backgroundColor: `${themeColors.primary}20` }}
+                >
+                  <IdCard className="text-2xl text-green-900"/>
+                </div>
+                <h3 className="text-xl font-medium text-slate-900 mb-2">Cara Daftar</h3>
+                <p className="text-slate-600 text-sm font-light leading-relaxed">
+                  Siapkan KTP untuk mendaftar menjadi penanam dan mulai perjalananmu
+                </p>
+              </div>
             </motion.div>
-
             <motion.div
               variants={itemVariants}
-              className="col-span-1 md:col-span-4 lg:col-span-6 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden group flex items-center justify-center"
+              className="col-span-1 md:col-span-2 lg:col-span-4 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden group flex items-center justify-center"
               style={{
                 background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})`,
               }}

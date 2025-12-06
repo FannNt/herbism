@@ -241,7 +241,7 @@ export default function Navbar() {
                             whileHover={{ x: 4 }}
                             onClick={async () => {
                               await logout()
-                              router.push("/")
+                              router.push("/home")
                             }}
                             className="w-full px-4 py-3 flex items-center gap-3 rounded-xl transition-all duration-200 hover:bg-red-50"
                           >
