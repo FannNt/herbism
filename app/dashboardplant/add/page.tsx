@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "../../context/ThemeContext"
-import { ChevronLeft, Upload, X, Sprout, Image as ImageIcon, Sun, Calendar } from "lucide-react"
+import { ChevronLeft, Upload, X, Sprout, Image as ImageIcon, Sun, Calendar, Sparkles, Bot } from "lucide-react"
 
 const soilTypes = [
   "Tanah Gembur",
@@ -18,14 +18,57 @@ export default function AddPlantPage() {
   const { getThemeColors } = useTheme()
   const themeColors = getThemeColors()
 
+  const [isGenerating, setIsGenerating] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     type: "",
     soil: "",
-    plantedDate: ""
+    plantedDate: "",
+    wateringSchedule: "",
+    fertilizeSchedule: ""
   })
   
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+
+  const handleGenerateSchedule = () => {
+    setIsGenerating(true)
+    
+    // Simulate AI Generation
+    setTimeout(() => {
+        let aiWatering = "Setiap 2 hari sekali (Standard)"
+        let aiFertilizing = "Setiap 2 minggu sekali dengan NPK"
+
+        // Simple mock logic based on type
+        switch(formData.type) {
+            case "Sukulen/Gel":
+                aiWatering = "Seminggu sekali, tanah harus kering"
+                aiFertilizing = "Sebulan sekali dengan pupuk cair rendah nitrogen"
+                break
+            case "Rimpang/Umbi":
+                aiWatering = "Setiap 2-3 hari, jaga kelembaban tapi jangan tergenang"
+                aiFertilizing = "Setiap 2 minggu dengan pupuk kandang atau kompos"
+                break
+            case "Herbal Daun":
+                aiWatering = "Setiap hari di pagi hari"
+                aiFertilizing = "Setiap minggu dengan pupuk daun"
+                break
+            case "Herbal Pohon":
+                aiWatering = "2-3 hari sekali secara mendalam"
+                aiFertilizing = "Sebulan sekali dengan pupuk lengkap"
+                break
+            default:
+                aiWatering = "Setiap 2 hari sekali saat tanah mulai kering"
+                aiFertilizing = "Setiap 2 minggu sekali dengan pupuk organik"
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            wateringSchedule: aiWatering,
+            fertilizeSchedule: aiFertilizing
+        }))
+        setIsGenerating(false)
+    }, 1500)
+  }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -135,14 +178,21 @@ export default function AddPlantPage() {
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-sm font-medium text-slate-700">Jenis Tanaman</label>
-                        <input 
-                            type="text"
-                            required
-                            value={formData.type}
-                            onChange={(e) => setFormData({...formData, type: e.target.value})}
-                            placeholder="Contoh: Rizoma"
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400"
-                        />
+                        <div className="relative">
+                            <select 
+                                required
+                                value={formData.type}
+                                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none bg-white text-slate-700"
+                            >
+                                <option value="" disabled>Pilih Jenis Tanaman</option>
+                                <option value="Herbal Daun">Herbal Daun</option> <option value="Rimpang/Umbi">Rimpang/Umbi</option> <option value="Bunga/Biji">Bunga/Biji</option> <option value="Sukulen/Gel">Sukulen/Gel</option>
+                                <option value="Herbal Pohon">Herbal Pohon</option>
+                                <option value="Aromatik">Aromatik</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                            <Sprout className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
                     </div>
                 </div>
 
@@ -177,6 +227,110 @@ export default function AddPlantPage() {
                             <Calendar className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
                     </div>
+                </div>
+
+                {/* Care Schedules (AI Generated) */}
+                <div className="border-t border-slate-100 pt-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-purple-600" />
+                            Rekomendasi Perawatan 
+                        </h3>
+                        {!formData.wateringSchedule && (
+                            <button
+                                type="button"
+                                onClick={handleGenerateSchedule}
+                                disabled={isGenerating || !formData.type}
+                                className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            >
+                                {isGenerating ? (
+                                    <>
+                                        <div className="w-3 h-3 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-3 h-3" />
+                                        Buat Jadwal
+                                    </>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                    
+                    {formData.wateringSchedule ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                             <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-slate-700">Jadwal Penyiraman</label>
+                                <div className="relative">
+                                    <input 
+                                        type="text"
+                                        readOnly
+                                        value={formData.wateringSchedule}
+                                        className="w-full px-4 py-3 rounded-xl border border-purple-200 bg-purple-50/50 text-slate-700 focus:outline-none"
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <Sparkles className="w-4 h-4 text-purple-400" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-slate-700">Jadwal Pemupukan</label>
+                                <div className="relative">
+                                    <input 
+                                        type="text"
+                                        readOnly
+                                        value={formData.fertilizeSchedule}
+                                        className="w-full px-4 py-3 rounded-xl border border-purple-200 bg-purple-50/50 text-slate-700 focus:outline-none"
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <Sparkles className="w-4 h-4 text-purple-400" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="md:col-span-2 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={handleGenerateSchedule}
+                                    disabled={isGenerating}
+                                    className="text-xs text-slate-500 hover:text-purple-600 transition-colors flex items-center gap-1"
+                                >
+                                    <Sparkles className="w-3 h-3" />
+                                    Regenerate Jadwal
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-slate-50 rounded-xl p-8 text-center border border-dashed border-slate-300">
+                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                                <Bot className="w-6 h-6 text-slate-400" />
+                            </div>
+                            <p className="text-slate-600 font-medium mb-1">Belum ada jadwal perawatan</p>
+                            <p className="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
+                                Biarkan AI membuatkan jadwal penyiraman dan pemupukan yang optimal untuk tanamanmu
+                            </p>
+                            <button
+                                type="button"
+                                onClick={handleGenerateSchedule}
+                                disabled={isGenerating || !formData.type}
+                                className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-2 mx-auto"
+                            >
+                                {isGenerating ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Membuat Jadwal...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-4 h-4 text-purple-300" />
+                                        Buat Jadwal Otomatis
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -119,8 +119,8 @@ export default function DashboardPlantPage() {
             <Calendar className="w-4 h-4" />
             <span>01 Jan 2120</span>
           </div>
-          <Link href="/dashboardplant/1/journal">
-            Lihat Jurnal
+          <Link href="/dashboardplant/1" className="font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
+            Lihat Detail
           </Link>
         </div>
       </div>

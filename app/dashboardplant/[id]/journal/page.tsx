@@ -3,8 +3,9 @@
 import { useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useTheme } from "../../../context/ThemeContext"
-import { ChevronLeft, ChevronRight, Calendar, Plus, BookOpen, Pencil, X, Upload, Save, Image as ImageIcon } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar, Plus, BookOpen, Pencil, X, Upload, Save, Image as ImageIcon, MessageCircle, Send, Sparkles, Bot } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import Image from "next/image"
 
 // Mock
 const mockJournals = [
@@ -12,19 +13,22 @@ const mockJournals = [
     week: 1,
     date: "10 Okt 2025",
     note: "Tanaman baru saja ditanam. Kondisi tanah gembur dan lembab. Cuaca cerah mendukung pertumbuhan awal.",
-    image: "/plants/journal-1.jpg"
+    image: "/plants/journal-1.jpg",
+    aiFeedback: "Awal yang sangat baik! Kondisi tanah yang gembur dan lembab sangat ideal untuk pertumbuhan awal. Pastikan untuk menjaga kelembaban tanah secara konsisten dalam 2 minggu pertama. Cuaca cerah memang mendukung, namun hindari paparan sinar matahari langsung yang terlalu lama."
   },
   {
     week: 2,
     date: "17 Okt 2025",
     note: "Tunas mulai muncul. Tinggi sekitar 2cm. Penyiraman rutin setiap pagi. Tidak ada tanda hama.",
-    image: "/plants/journal-2.jpg"
+    image: "/plants/journal-2.jpg",
+    aiFeedback: "Pertumbuhan tunas pada minggu ke-2 menunjukkan perkembangan yang sehat! Tinggi 2cm adalah progres yang baik. Penyiraman pagi hari sudah tepat, namun pertimbangkan untuk menambah penyiraman sore hari jika cuaca sangat panas. Terus pantau tanda-tanda hama secara rutin."
   },
   {
     week: 3,
     date: "24 Okt 2025",
     note: "Daun pertama mulai mekar. Pertumbuhan sangat baik. Diberi pupuk organik sedikit untuk mempercepat pertumbuhan.",
-    image: "/plants/journal-3.jpg"
+    image: "/plants/journal-3.jpg",
+    aiFeedback: "Luar biasa! Daun pertama yang mekar adalah tanda tanaman berkembang dengan baik. Pemberian pupuk organik pada minggu ke-3 sudah tepat waktu. Pastikan tidak memberikan pupuk berlebihan - 'sedikit' adalah kunci. Lanjutkan perawatan rutin dan perhatikan warna daun untuk memastikan nutrisi tercukupi."
   },
 ]
 
@@ -41,6 +45,11 @@ export default function JournalPage() {
     note: ""
   })
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'ai', message: string}>>([
+    { role: 'ai', message: 'Halo aku Erbism, saya bisa siap membantu merawat taanaman. Ada yang bisa saya bantu?' }
+  ])
+  const [chatInput, setChatInput] = useState("")
 
   const totalPages = Math.ceil(mockJournals.length / 2)
   
@@ -54,6 +63,21 @@ export default function JournalPage() {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1)
     }
+  }
+  
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return
+    
+    // Add user message
+    setChatMessages(prev => [...prev, { role: 'user', message: chatInput }])
+    
+    // Respon ai
+    setTimeout(() => {
+      const aiResponse = "Terima kasih atas pertanyaannya! Saya akan membantu Anda dengan perawatan tanaman. Berdasarkan informasi yang Anda berikan, saya sarankan untuk..."
+      setChatMessages(prev => [...prev, { role: 'ai', message: aiResponse }])
+    }, 1000)
+    
+    setChatInput("")
   }
 
   const leftEntry = mockJournals[currentPage * 2]
@@ -146,7 +170,7 @@ export default function JournalPage() {
                       </div>
 
                       {/* Photo header */}
-                      <div className="w-full h-40 md:h-48 bg-amber-100 rounded-xl mb-6 flex items-center justify-center border-2 border-dashed border-amber-300 overflow-hidden">
+                      <div className="w-full h-22 md:h-36 bg-amber-100 rounded-xl mb-6 flex items-center justify-center border-2 border-dashed border-amber-300 overflow-hidden">
                         <div className="text-center text-amber-400">
                           <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
                           <p className="text-xs">Foto Tanaman</p>
@@ -160,6 +184,19 @@ export default function JournalPage() {
                           "{leftEntry.note}"
                         </p>
                       </div>
+
+                      {/* AI Feedback */}
+                      {leftEntry.aiFeedback && (
+                        <div className="mt-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-4 border-2 border-purple-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Sparkles className="w-4 h-4 text-purple-600" />
+                            <h4 className="text-sm font-bold text-purple-900">Feedback dari Erbis</h4>
+                          </div>
+                          <p className="text-sm text-purple-800 leading-relaxed">
+                            {leftEntry.aiFeedback}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center text-amber-300">
@@ -234,6 +271,19 @@ export default function JournalPage() {
                           "{rightEntry.note}"
                         </p>
                       </div>
+
+                      {/* AI Feedback */}
+                      {rightEntry.aiFeedback && (
+                        <div className="mt-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-4 border-2 border-purple-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Sparkles className="w-4 h-4 text-purple-600" />
+                            <h4 className="text-sm font-bold text-purple-900">Feedback dari Erbis</h4>
+                          </div>
+                          <p className="text-sm text-purple-800 leading-relaxed">
+                            {rightEntry.aiFeedback}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center text-amber-300">
@@ -304,7 +354,7 @@ export default function JournalPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed inset-0 m-auto z-50 w-full max-w-2xl h-fit max-h-[90vh] overflow-y-auto bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl shadow-2xl"
+              className="fixed inset-0 m-auto z-50 w-full max-w-2xl h-fit max-h-[90vh] overflow-y-auto bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl shadow-2xl text-slate-900"
             >
               {/* Modal Header */}
               <div className="sticky top-0 bg-amber-100/90 backdrop-blur-md border-b border-amber-200 p-6 flex items-center justify-between rounded-t-3xl">
@@ -325,7 +375,7 @@ export default function JournalPage() {
                 </button>
               </div>
 
-              {/* Modal Body */}
+              {/* Modal */}
               <div className="p-6 space-y-6">
                 {/* Week Number */}
                 <div className="space-y-2">
@@ -416,8 +466,6 @@ export default function JournalPage() {
                     className="w-full px-4 py-3 rounded-xl border-2 border-amber-200 focus:border-amber-500 focus:outline-none bg-white text-amber-900 resize-none font-serif"
                   />
                 </div>
-
-                {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => {
@@ -447,6 +495,118 @@ export default function JournalPage() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Floating */}
+      <motion.button
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.5, type: "spring", stiffness: 260, damping: 20 }}
+        onClick={() => setIsChatOpen(!isChatOpen)}
+        className="fixed bottom-6 right-6 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center z-40 group hover:scale-110 transition-transform text-slate-900"
+        style={{ backgroundColor: themeColors.primary }}
+      >
+        <AnimatePresence mode="wait">
+          {isChatOpen ? (
+            <motion.div
+              key="close"
+              initial={{ rotate: -90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: 90, opacity: 0 }}
+            >
+              <X className="w-7 h-7 text-white" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chat"
+              initial={{ rotate: 90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: -90, opacity: 0 }}
+              className="relative"
+            >
+              <MessageCircle className="w-7 h-7 text-white" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
+
+      {/* Interface */}
+      <AnimatePresence>
+        {isChatOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)] h-[500px] bg-white rounded-3xl shadow-2xl z-40 flex flex-col overflow-hidden border-2"
+            style={{ borderColor: themeColors.primary }}
+          >
+            {/* Chat Header */}
+            <div 
+              className="p-4 text-white flex items-center gap-3"
+              style={{ backgroundColor: themeColors.primary }}
+            >
+              <div className="flex-1">
+                <h3 className="font-bold text-lg">Erbis</h3>
+                <p className="text-xs text-white/80">Siap membantu perawatan tanaman Anda</p>
+              </div>
+            </div>
+
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-br from-slate-50 to-amber-50 text-slate-900">
+              {chatMessages.map((msg, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-br-sm'
+                        : 'bg-white border-2 border-purple-200 text-slate-800 rounded-bl-sm'
+                    }`}
+                  >
+                    {msg.role === 'ai' && (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs font-semibold text-purple-600">Erbis</span>
+                      </div>
+                    )}
+                    <p className="text-sm leading-relaxed">{msg.message}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Chat Input */}
+            <div className="p-4 bg-white border-t border-slate-200 text-slate-900">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Tanya tentang perawatan tanaman..."
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:outline-none text-sm"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!chatInput.trim()}
+                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
+                  style={{ backgroundColor: themeColors.primary }}
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 text-center">
+                Powered by AI • Respon mungkin tidak selalu akurat
+              </p>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
