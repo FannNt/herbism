@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useTheme } from "../../context/ThemeContext"
-import { 
-  ChevronLeft, 
-  Calendar, 
-  Droplets, 
-  Sprout, 
+import {
+  ChevronLeft,
+  Calendar,
+  Droplets,
+  Sprout,
   Sun,
   Leaf,
   BookOpen,
@@ -17,27 +17,33 @@ import {
   AlertCircle
 } from "lucide-react"
 import { motion } from "framer-motion"
-
-// Mock data
-const mockPlantData = {
-  id: "1",
-  name: "Jahe Merah Organik",
-  type: "Rizoma",
-  soilType: "Tanah Gembur",
-  plantDate: "2024-10-01",
-  wateringSchedule: "Setiap pagi dan sore",
-  fertilizeSchedule: "Setiap 2 minggu sekali",
-  specialTreatment: "Tanaman jahe merah memerlukan perhatian khusus untuk hasil optimal. Pastikan tanah selalu lembab namun tidak tergenang air. Berikan pupuk organik setiap 2 minggu untuk meningkatkan kualitas rimpang. Hindari paparan sinar matahari langsung yang terlalu lama, idealnya 4-6 jam per hari. Lakukan penyiangan gulma secara rutin untuk mencegah kompetisi nutrisi. Perhatikan tanda-tanda hama seperti ulat atau kutu daun, segera lakukan pengendalian organik jika ditemukan.",
-  image: "/plants/jahe-merah.jpg"
-}
+import { getPlantById, Plant } from "@/services/plantService"
 
 export default function PlantProfilePage() {
   const router = useRouter()
   const params = useParams()
   const { getThemeColors } = useTheme()
   const themeColors = getThemeColors()
-  
-  const [plant] = useState(mockPlantData)
+
+  const [plant, setPlant] = useState<Plant | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchPlant = async () => {
+      if (!params.id || typeof params.id !== 'string') return
+
+      try {
+        const plantData = await getPlantById(params.id)
+        setPlant(plantData)
+      } catch (error) {
+        console.error("Error fetching plant:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPlant()
+  }, [params.id])
 
   // Calculate plant age
   const calculateAge = (plantDate: string) => {
@@ -47,11 +53,43 @@ export default function PlantProfilePage() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     const weeks = Math.floor(diffDays / 7)
     const days = diffDays % 7
-    
+
     if (weeks > 0) {
       return `${weeks} minggu ${days > 0 ? `${days} hari` : ''}`
     }
     return `${days} hari`
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-emerald-700">Memuat data tanaman...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!plant) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-12 h-12 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Tanaman Tidak Ditemukan</h2>
+          <p className="text-slate-500 mb-6">Data tanaman tidak ada atau telah dihapus</p>
+          <button
+            onClick={() => router.push('/dashboardplant')}
+            style={{ backgroundColor: themeColors.primary }}
+            className="px-6 py-3 rounded-xl text-white font-medium hover:opacity-90 transition-all"
+          >
+            Kembali ke Dashboard
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -72,7 +110,7 @@ export default function PlantProfilePage() {
                 <p className="text-xs sm:text-sm text-emerald-600">Detail lengkap tanaman herbal</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <button
                 className="p-2.5 hover:bg-red-100 rounded-xl transition-colors text-red-600"
@@ -86,7 +124,7 @@ export default function PlantProfilePage() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* Hero Card  */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl overflow-hidden shadow-lg border border-emerald-100"
@@ -107,14 +145,14 @@ export default function PlantProfilePage() {
               <div className="mb-6">
                 <h2 className="text-3xl font-bold text-emerald-900 mb-2">{plant.name}</h2>
                 <div className="flex flex-wrap gap-2">
-                  <span 
+                  <span
                     className="px-3 py-1.5 rounded-full text-sm font-medium text-white"
                     style={{ backgroundColor: themeColors.primary }}
                   >
-                    {plant.type}
+                    {plant.kind}
                   </span>
                   <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                    Umur: {calculateAge(plant.plantDate)}
+                    Umur: {calculateAge(plant.plantedDate)}
                   </span>
                 </div>
               </div>
@@ -125,10 +163,10 @@ export default function PlantProfilePage() {
                     <p className="text-xs font-medium text-emerald-700">Tanggal Tanam</p>
                   </div>
                   <p className="text-sm font-bold text-emerald-900">
-                    {new Date(plant.plantDate).toLocaleDateString('id-ID', { 
-                      day: 'numeric', 
-                      month: 'long', 
-                      year: 'numeric' 
+                    {new Date(plant.plantedDate).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
                     })}
                   </p>
                 </div>
@@ -156,7 +194,7 @@ export default function PlantProfilePage() {
         </motion.div>
 
         {/*Schedule */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -190,13 +228,13 @@ export default function PlantProfilePage() {
               </div>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
-              <p className="text-green-900 font-medium">{plant.fertilizeSchedule}</p>
+              <p className="text-green-900 font-medium">{plant.fertilizerSchedule}</p>
             </div>
           </div>
         </motion.div>
 
         {/* Erbis Special Treatment */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -215,12 +253,24 @@ export default function PlantProfilePage() {
           </div>
 
           <div className="bg-white/70 backdrop-blur-sm rounded-xl p-5 border border-purple-100">
-            <div className="flex items-start gap-3 mb-3">
-              <AlertCircle className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-              <p className="text-purple-900 leading-relaxed text-sm md:text-base">
-                {plant.specialTreatment}
-              </p>
-            </div>
+            {plant.specialCare && plant.specialCare.length > 0 ? (
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                <ul className="space-y-2 flex-1">
+                  {plant.specialCare.map((care, index) => (
+                    <li key={index} className="flex items-start gap-2 text-purple-900 leading-relaxed text-sm md:text-base">
+                      <span className="text-purple-500 mt-0.5">•</span>
+                      <span>{care}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-purple-600 text-sm">Belum ada perawatan khusus yang dihasilkan untuk tanaman ini</p>
+                <p className="text-purple-400 text-xs mt-1">Silakan regenerate jadwal perawatan saat mengedit tanaman</p>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 flex items-center gap-2 text-xs text-purple-600">

@@ -20,7 +20,7 @@ export type Plant = {
     plantedDate: string;
     wateringSchedule: string;
     fertilizerSchedule: string;
-    specialTreatment: string;
+    specialCare: string[];
     imageUrl?: string;
     createdAt?: Date;
 };
@@ -61,6 +61,28 @@ export const getUserPlants = async (userId: string): Promise<Plant[]> => {
         return plants;
     } catch (error) {
         console.error("Error fetching plants:", error);
+        throw error;
+    }
+};
+
+// Get a single plant by ID
+export const getPlantById = async (plantId: string): Promise<Plant | null> => {
+    try {
+        const { getDoc } = await import("firebase/firestore");
+        const docRef = doc(db, "plants", plantId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+            return null;
+        }
+
+        return {
+            id: docSnap.id,
+            ...docSnap.data(),
+            createdAt: docSnap.data().createdAt?.toDate(),
+        } as Plant;
+    } catch (error) {
+        console.error("Error fetching plant:", error);
         throw error;
     }
 };

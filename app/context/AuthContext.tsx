@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // User is fully active, redirect away from auth/onboarding pages
           if (isOnboardingPage || isAuthPage) {
             console.log("User completed onboarding, redirecting to home...");
-            router.push('/');
+            router.push('/profile');
           }
         } else {
           // User needs onboarding, force them to onboarding page
