@@ -1,6 +1,7 @@
 "use client"
 
 import { motion, Variants } from "framer-motion"
+import Link from "next/link"
 import { useTheme } from "../context/ThemeContext"
 
 export default function FeaturesSection() {
@@ -199,24 +200,26 @@ export default function FeaturesSection() {
                 ))}
               </ul>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group/btn w-full sm:w-auto mt-auto"
-                style={{
-                  background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})`
-                }}
-              >
-                <span className="font-medium text-sm sm:text-base">Mulai Diagnosa</span>
-                <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5 group-hover/btn:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <Link href="/diagnosa-tanaman" className="w-full sm:w-auto mt-auto">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group/btn w-full"
+                  style={{
+                    background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})`
+                  }}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </motion.button>
+                  <span className="font-medium text-sm sm:text-base">Mulai Diagnosa</span>
+                  <svg
+                    className="w-4 h-4 sm:w-5 sm:h-5 group-hover/btn:translate-x-1 transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </motion.button>
+              </Link>
             </div>
           </motion.div>
         </div>

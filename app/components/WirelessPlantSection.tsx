@@ -2,6 +2,7 @@
 import { motion, type Variants } from "framer-motion"
 import { useTheme } from "../context/ThemeContext"
 import { Sprout, Video, IdCard } from "lucide-react"
+import Link from "next/link"
 
   export default function WirelessPlantSection() {
     const { getThemeColors } = useTheme()
@@ -150,21 +151,23 @@ import { Sprout, Video, IdCard } from "lucide-react"
               <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -ml-10 -mt-10" />
               <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl mr-10 mb-10" />
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-3 px-8 py-4 bg-white text-slate-900 rounded-full font-medium shadow-lg hover:shadow-xl transition-all group/btn relative z-10"
-              >
-                <span>Mulai Sekarang</span>
-                <svg
-                  className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <Link href="/wirelessplant">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-white text-slate-900 rounded-full font-medium shadow-lg hover:shadow-xl transition-all group/btn relative z-10"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </motion.button>
+                  <span>Mulai Sekarang</span>
+                  <svg
+                    className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </motion.button>
+              </Link>
             </motion.div>
           </div>
         </motion.div>

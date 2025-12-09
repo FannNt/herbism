@@ -1,6 +1,5 @@
 "use client"
-
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import HeroPage from './HeroPage';
 import ConsultationSection from './ConsultationSection';
 import FeaturesSection from './ScanSection';

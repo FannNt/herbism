@@ -54,8 +54,8 @@ export default function Navbar() {
   const centerFAB = { id: "scan", label: "Scan", icon: ScanLine, hasDropdown: true }
 
   const scanOptions = [
-    { id: "scan-manfaat", label: "Scan Manfaat", icon: Leaf, description: "Identifikasi manfaat tanaman" },
-    { id: "scan-penyakit", label: "Scan Penyakit", icon: ShieldAlert, description: "Diagnosa penyakit tanaman" }
+    { id: "scan-manfaat", label: "Scan Manfaat", icon: Leaf, description: "Identifikasi manfaat tanaman", path: "/manfaat-tanaman" },
+    { id: "scan-penyakit", label: "Scan Penyakit", icon: ShieldAlert, description: "Diagnosa penyakit tanaman", path: "/diagnosa-tanaman" }
   ]
 
   const akunOptions = [

@@ -17,6 +17,7 @@ import {
   Plus,
   LogOut,
   X,
+  MessageCircle,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -152,6 +153,15 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
+
+          {/* Consultation Button */}
+          <button
+            onClick={() => router.push("/consultation")}
+            className="hidden sm:flex px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-medium hover:bg-emerald-100 transition-colors items-center gap-2 mr-2"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Konsultasi Kesehatan</span>
+          </button>
 
           {/* Logout Button */}
           <button
@@ -316,6 +326,58 @@ export default function ProfilePage() {
             ) : (
               <p className="text-sm text-slate-600">Tidak ada alergi</p>
             )}
+          </div>
+
+          {/* Saved Recipes from Consultation */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    Racikan Tersimpan
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Dari konsultasi kesehatan
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => router.push('/consultation')}
+                className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200 flex items-center gap-1"
+              >
+                <MessageCircle className="w-3 h-3" />
+                Konsultasi
+              </button>
+            </div>
+            
+            {/* Mock Saved Recipes */}
+            <div className="space-y-3">
+              {/* Recipe 1 */}
+              <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="text-sm font-bold text-slate-900">Racikan Jahe Merah Obat Alami</h4>
+                  <span className="text-xs text-amber-600 font-medium">Tersimpan</span>
+                </div>
+                <p className="text-xs text-slate-600 mb-2">Mengobati batuk kering dan flu</p>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span>5 bahan</span>
+                  <span>•</span>
+                  <span>6 langkah</span>
+                </div>
+              </div>
+            </div>
+
+            {/* View All Button */}
+            <button
+              onClick={() => router.push('/saved-recipes')}
+              className="w-full mt-4 px-4 py-2.5 bg-slate-50 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-100 transition-colors border border-slate-200 flex items-center justify-center gap-2"
+            >
+              Lihat Semua Racikan
+              <ChevronLeft className="w-4 h-4 rotate-180" />
+            </button>
           </div>
 
           {/* Tanaman Herbal Section - Full Width */}
