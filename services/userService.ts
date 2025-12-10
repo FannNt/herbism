@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 export type User = {
+  uid?: string; 
   email: string;
   name?: string;
   username?: string;
@@ -31,7 +32,7 @@ export const findUser = async (uid: string) => {
 
   if (!snap.exists()) return null;
 
-  return snap.data() as User;
+  return { uid: snap.id, ...snap.data() } as User;
 };
 
 // update data profil
@@ -66,7 +67,7 @@ export const listenToUser = (
   const userRef = doc(db, "profiles", uid);
   return onSnapshot(userRef, (doc) => {
     if (doc.exists()) {
-      callback(doc.data() as User);
+      callback({ uid: doc.id, ...doc.data() } as User);
     } else {
       callback(null);
     }

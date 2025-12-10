@@ -1,14 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useTheme } from "../../../context/ThemeContext"
+import { useAuth } from "../../../context/AuthContext"
 import { ChevronLeft, ChevronRight, Calendar, Plus, BookOpen, Pencil, X, Upload, Save, Image as ImageIcon, MessageCircle, Send, Sparkles, Bot } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import Image from "next/image"
+import { 
+    createJournalEntry, 
+    getPlantJournalEntries, 
+    canCreateEntry, 
+    JournalEntry as ServiceEntry 
+} from "@/services/journalService"
 
-// Mock
-interface JournalEntry {
+// UI Interface
+interface UIJournalEntry {
+  id?: string;
   week: number;
   date: string;
   note: string;
@@ -16,81 +23,121 @@ interface JournalEntry {
   aiFeedback?: string;
 }
 
-// Mock
-// Initial data
-const initialJournals: JournalEntry[] = [
-  {
-    week: 1,
-    date: "10 Okt 2025",
-    note: "Tanaman baru saja ditanam. Kondisi tanah gembur dan lembab. Cuaca cerah mendukung pertumbuhan awal.",
-    image: "/plants/journal-1.jpg",
-    // aiFeedback: "..." (Cleared to show button)
-  },
-  {
-    week: 2,
-    date: "17 Okt 2025",
-    note: "Tunas mulai muncul. Tinggi sekitar 2cm. Penyiraman rutin setiap pagi. Tidak ada tanda hama.",
-    image: "/plants/journal-2.jpg",
-    // aiFeedback: "..." (Cleared to show button)
-  },
-  {
-    week: 3,
-    date: "24 Okt 2025",
-    note: "Daun pertama mulai mekar. Pertumbuhan sangat baik. Diberi pupuk organik sedikit untuk mempercepat pertumbuhan.",
-    image: "/plants/journal-3.jpg",
-    // aiFeedback: "..." (Cleared to show button)
-  },
-]
-
 export default function JournalPage() {
   const router = useRouter()
   const params = useParams()
+  const { user } = useAuth()
   const { getThemeColors } = useTheme()
   const themeColors = getThemeColors()
-  const [journals, setJournals] = useState<JournalEntry[]>(initialJournals)
+  
+  const plantId = params?.id as string
+
+  const [journals, setJournals] = useState<UIJournalEntry[]>([])
   const [currentPage, setCurrentPage] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loadingFeedback, setLoadingFeedback] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  
+  // Constraint Sate
+  const [canAdd, setCanAdd] = useState(false)
+  const [nextUnlockDate, setNextUnlockDate] = useState<Date | null>(null)
   
   const [formData, setFormData] = useState({
-    week: journals.length + 1,
-    date: "",
+    date: new Date().toISOString().split('T')[0],
     note: ""
   })
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'ai', message: string}>>([
-    { role: 'ai', message: 'Halo aku Erbism, saya bisa siap membantu merawat taanaman. Ada yang bisa saya bantu?' }
+    { role: 'ai', message: 'Halo aku Erbis, saya siap membantu merawat tanaman. Ada yang bisa saya bantu?' }
   ])
   const [chatInput, setChatInput] = useState("")
 
-  const totalPages = Math.ceil(journals.length / 2)
-  
-  const handleSaveJournal = () => {
-    const newJournal = {
-      week: formData.week,
-      date: new Date(formData.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-      note: formData.note,
-      image: imagePreview || "/plants/journal-default.jpg", // Fallback image
-      aiFeedback: undefined // Start without feedback
+  useEffect(() => {
+    if (user && plantId) {
+        fetchData()
     }
+  }, [user, plantId])
+
+  const fetchData = async () => {
+    setIsLoading(true)
+    try {
+        if (!user?.uid || !plantId) return 
+
+        // 1. Fetch entries (Desc)
+        const entries = await getPlantJournalEntries(user.uid, plantId)
+        
+        // 2. Convert to UI Format and Sort Ascending (Week 1, Week 2...)
+        // Firestore returns Descending (Newest first). so we reverse it to be Chronological.
+        const chronEntries = entries.slice().reverse().map((entry, index) => ({
+            id: entry.id,
+            week: index + 1,
+            date: entry.createdAt ? entry.createdAt.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : "",
+            note: entry.content,
+            image: entry.imageUrl || "/plants/journal-default.jpg",
+            aiFeedback: entry.aiFeedback
+        }))
+        setJournals(chronEntries)
+
+        // 3. Check constraint
+        const check = await canCreateEntry(user.uid, plantId)
+        setCanAdd(check.allowed)
+        if (check.nextDate) {
+            setNextUnlockDate(check.nextDate)
+        }
+
+        // Set to last page if new entries
+        if (chronEntries.length > 0) {
+            const pages = Math.ceil(chronEntries.length / 2)
+            setCurrentPage(pages - 1)
+        }
+
+    } catch (err) {
+        console.error(err)
+    } finally {
+        setIsLoading(false)
+    }
+}
+
+  const handleOpenModal = () => {
+      if (canAdd) {
+          setIsModalOpen(true)
+      } else {
+          // Show alert if not allowed
+          const dateStr = nextUnlockDate?.toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})
+          alert(`Anda belum bisa mengisi jurnal hari ini. Silakan kembali pada ${dateStr} untuk mengisi jurnal minggu berikutnya.`)
+      }
+  }
+
+  const handleSaveJournal = async () => {
+    if (!user?.uid || !plantId) return
     
-    setJournals([...journals, newJournal])
-    setIsModalOpen(false)
-    setFormData({ week: journals.length + 2, date: "", note: "" })
-    setImagePreview(null)
-    
-    // Go to the last page to see new entry
-    const newTotalPages = Math.ceil((journals.length + 1) / 2)
-    if (newTotalPages > totalPages) {
-      setCurrentPage(newTotalPages - 1)
+    // Optimistic UI update or wait? Let's wait.
+    try {
+        await createJournalEntry({
+            userId: user.uid,
+            plantId: plantId,
+            content: formData.note,
+            imageUrl: imagePreview || undefined,
+            mood: "Happy", // Default mood for now as specific UI absent in modal
+            // Date is handled by server timestamp
+        })
+        
+        setIsModalOpen(false)
+        setFormData({ date: new Date().toISOString().split('T')[0], note: "" })
+        setImagePreview(null)
+        
+        await fetchData() // Refresh data and constraints
+    } catch (error: any) {
+        alert(error.message || "Gagal menyimpan jurnal")
     }
   }
 
   const handleRequestFeedback = (index: number) => {
     setLoadingFeedback(index)
     
-    // Simulate AI processing
+    // Simulate AI processing (Real implementation would call Gemini API)
     setTimeout(() => {
       const updatedJournals = [...journals]
       updatedJournals[index] = {
@@ -102,6 +149,8 @@ export default function JournalPage() {
     }, 2000)
   }
   
+  const totalPages = Math.ceil(journals.length / 2) || 1
+
   const nextPage = () => {
     if (currentPage < totalPages - 1) {
       setCurrentPage(currentPage + 1)
@@ -117,10 +166,8 @@ export default function JournalPage() {
   const handleSendMessage = () => {
     if (!chatInput.trim()) return
     
-    // Add user message
     setChatMessages(prev => [...prev, { role: 'user', message: chatInput }])
     
-    // Respon ai
     setTimeout(() => {
       const aiResponse = "Terima kasih atas pertanyaannya! Saya akan membantu Anda dengan perawatan tanaman. Berdasarkan informasi yang Anda berikan, saya sarankan untuk..."
       setChatMessages(prev => [...prev, { role: 'ai', message: aiResponse }])
@@ -133,6 +180,14 @@ export default function JournalPage() {
   const rightEntryIndex = currentPage * 2 + 1
   const leftEntry = journals[leftEntryIndex]
   const rightEntry = journals[rightEntryIndex]
+
+  if (isLoading) {
+      return (
+        <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+        </div>
+      )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
@@ -155,12 +210,16 @@ export default function JournalPage() {
             </div>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
-            style={{ backgroundColor: themeColors.primary }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-medium hover:opacity-90 transition-all shadow-sm active:scale-95 text-sm"
+            onClick={handleOpenModal}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-medium transition-all shadow-sm active:scale-95 text-sm ${
+                canAdd ? "hover:opacity-90" : "opacity-50 cursor-not-allowed grayscale"
+            }`}
+            style={{ backgroundColor: canAdd ? themeColors.primary : '#9ca3af' }}
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Tulis Jurnal</span>
+            <span className="hidden sm:inline">
+                {canAdd ? "Tulis Jurnal" : "Jurnal Terkunci"}
+            </span>
           </button>
         </div>
       </header>
@@ -215,23 +274,31 @@ export default function JournalPage() {
                             </div>
                           </div>
                         </div>
-                        <button className="p-2 hover:bg-amber-100 rounded-lg transition-colors text-amber-600">
+                        {/* <button className="p-2 hover:bg-amber-100 rounded-lg transition-colors text-amber-600">
                           <Pencil className="w-4 h-4" />
-                        </button>
+                        </button> */}
                       </div>
 
                       {/* Photo header */}
-                      <div className="w-full h-22 md:h-36 bg-amber-100 rounded-xl mb-6 flex items-center justify-center border-2 border-dashed border-amber-300 overflow-hidden">
-                        <div className="text-center text-amber-400">
-                          <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                          <p className="text-xs">Foto Tanaman</p>
-                        </div>
-                      </div>
+                      {leftEntry.image && (
+                          <div className="w-full h-40 md:h-48 bg-amber-100 rounded-xl mb-6 flex items-center justify-center border-2 border-dashed border-amber-300 overflow-hidden relative">
+                            {/* If real image exists */}
+                             {leftEntry.image.startsWith('/') || leftEntry.image.startsWith('data') || leftEntry.image.startsWith('http') ? (
+                                <img src={leftEntry.image} alt="Journal" className="w-full h-full object-cover" />
+                             ) : (
+                                <div className="text-center text-amber-400">
+                                    <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                                    <p className="text-xs">Foto Tanaman</p>
+                                </div>
+                             )}
+                          </div>
+                      )}
+
 
                       {/* Notes */}
                       <div className="space-y-3">
                         <h3 className="text-sm font-semibold text-amber-700 uppercase tracking-wide">Catatan:</h3>
-                        <p className="text-amber-800 leading-relaxed font-serif text-base md:text-lg">
+                        <p className="text-amber-800 leading-relaxed font-serif text-base md:text-lg whitespace-pre-line">
                           "{leftEntry.note}"
                         </p>
                       </div>
@@ -271,7 +338,7 @@ export default function JournalPage() {
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center text-amber-300">
-                      <p className="text-lg font-serif italic">Halaman kosong</p>
+                      <p className="text-lg font-serif italic">Belum ada catatan minggu ini</p>
                     </div>
                   )}
 
@@ -322,23 +389,29 @@ export default function JournalPage() {
                             </div>
                           </div>
                         </div>
-                        <button className="p-2 hover:bg-amber-100 rounded-lg transition-colors text-amber-600">
+                        {/* <button className="p-2 hover:bg-amber-100 rounded-lg transition-colors text-amber-600">
                           <Pencil className="w-4 h-4" />
-                        </button>
+                        </button> */}
                       </div>
 
                       {/* Photo tanaman */}
-                      <div className="w-full h-40 md:h-48 bg-amber-100 rounded-xl mb-6 flex items-center justify-center border-2 border-dashed border-amber-300 overflow-hidden">
-                        <div className="text-center text-amber-400">
-                          <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                          <p className="text-xs">Foto Tanaman</p>
-                        </div>
-                      </div>
+                      {rightEntry.image && (
+                          <div className="w-full h-40 md:h-48 bg-amber-100 rounded-xl mb-6 flex items-center justify-center border-2 border-dashed border-amber-300 overflow-hidden relative">
+                             {rightEntry.image.startsWith('/') || rightEntry.image.startsWith('data') || rightEntry.image.startsWith('http') ? (
+                                <img src={rightEntry.image} alt="Journal" className="w-full h-full object-cover" />
+                             ) : (
+                                <div className="text-center text-amber-400">
+                                    <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                                    <p className="text-xs">Foto Tanaman</p>
+                                </div>
+                             )}
+                          </div>
+                      )}
 
                       {/* Notes tanaman */}
                       <div className="space-y-3">
                         <h3 className="text-sm font-semibold text-amber-700 uppercase tracking-wide">Catatan:</h3>
-                        <p className="text-amber-800 leading-relaxed font-serif text-base md:text-lg">
+                        <p className="text-amber-800 leading-relaxed font-serif text-base md:text-lg whitespace-pre-line">
                           "{rightEntry.note}"
                         </p>
                       </div>
@@ -378,7 +451,7 @@ export default function JournalPage() {
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center text-amber-300">
-                      <p className="text-lg font-serif italic">Tulis jurnal baru...</p>
+                      <p className="text-lg font-serif italic">Halaman berikutnya...</p>
                     </div>
                   )}
 
@@ -402,7 +475,8 @@ export default function JournalPage() {
             </button>
             
             <div className="flex items-center gap-2">
-              {Array.from({ length: totalPages }).map((_, i) => (
+                {/* Only show up to 5 dots to avoid overflow if many pages */}
+              {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i)}
@@ -417,7 +491,7 @@ export default function JournalPage() {
 
             <button 
               onClick={nextPage}
-              disabled={currentPage === totalPages - 1}
+              disabled={currentPage >= totalPages - 1} // FIX: Logic for disabling next button
               className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center text-amber-700 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
             >
               <ChevronRight className="w-6 h-6" />
@@ -468,29 +542,29 @@ export default function JournalPage() {
 
               {/* Modal */}
               <div className="p-6 space-y-6">
-                {/* Week Number */}
+                {/* Week Number (Auto calculated) */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-amber-800">Minggu Ke-</label>
                   <input
                     type="number"
-                    value={formData.week}
-                    onChange={(e) => setFormData({ ...formData, week: Number(e.target.value) })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-amber-200 focus:border-amber-500 focus:outline-none bg-white text-amber-900"
-                    min="1"
+                    value={journals.length + 1}
+                    disabled
+                    className="w-full px-4 py-3 rounded-xl border-2 border-amber-200 bg-amber-50 text-amber-900 opacity-70 cursor-not-allowed"
                   />
+                  <p className="text-xs text-amber-600">Terisi otomatis sesuai urutan jurnal.</p>
                 </div>
 
                 {/* Date */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-amber-800 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    Tanggal
+                    Tanggal (Hari Ini)
                   </label>
                   <input
                     type="date"
                     value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-amber-200 focus:border-amber-500 focus:outline-none bg-white text-amber-900"
+                    disabled // Disable date to enforce 'today' or current period
+                    className="w-full px-4 py-3 rounded-xl border-2 border-amber-200 bg-amber-50 text-amber-900 opacity-70 cursor-not-allowed"
                   />
                 </div>
 
@@ -561,7 +635,7 @@ export default function JournalPage() {
                   <button
                     onClick={() => {
                       setIsModalOpen(false)
-                      setFormData({ week: journals.length + 1, date: "", note: "" })
+                      setFormData({ date: new Date().toISOString().split('T')[0], note: "" })
                       setImagePreview(null)
                     }}
                     className="flex-1 py-3 rounded-xl bg-amber-200 text-amber-800 font-semibold hover:bg-amber-300 transition-colors"
@@ -570,8 +644,9 @@ export default function JournalPage() {
                   </button>
                   <button
                     onClick={handleSaveJournal}
+                    disabled={!formData.note}
                     style={{ backgroundColor: themeColors.primary }}
-                    className="flex-[2] py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    className="flex-[2] py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     <Save className="w-5 h-5" />
                     Simpan Jurnal
@@ -583,114 +658,6 @@ export default function JournalPage() {
         )}
       </AnimatePresence>
 
-      {/* Floating */}
-      <motion.button
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.5, type: "spring", stiffness: 260, damping: 20 }}
-        onClick={() => setIsChatOpen(!isChatOpen)}
-        className="fixed bottom-6 right-6 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center z-40 group hover:scale-110 transition-transform text-slate-900"
-        style={{ backgroundColor: themeColors.primary }}
-      >
-        <AnimatePresence mode="wait">
-          {isChatOpen ? (
-            <motion.div
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-            >
-              <X className="w-7 h-7 text-white" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="chat"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              className="relative"
-            >
-              <MessageCircle className="w-7 h-7 text-white" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
-
-      {/* Interface */}
-      <AnimatePresence>
-        {isChatOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)] h-[500px] bg-white rounded-3xl shadow-2xl z-40 flex flex-col overflow-hidden border-2"
-            style={{ borderColor: themeColors.primary }}
-          >
-            {/* Chat Header */}
-            <div 
-              className="p-4 text-white flex items-center gap-3"
-              style={{ backgroundColor: themeColors.primary }}
-            >
-              <div className="flex-1">
-                <h3 className="font-bold text-lg">Erbis</h3>
-                <p className="text-xs text-white/80">Siap membantu perawatan tanaman Anda</p>
-              </div>
-            </div>
-
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-br from-slate-50 to-amber-50 text-slate-900">
-              {chatMessages.map((msg, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-br-sm'
-                        : 'bg-white border-2 border-purple-200 text-slate-800 rounded-bl-sm'
-                    }`}
-                  >
-                    {msg.role === 'ai' && (
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs font-semibold text-purple-600">Erbis</span>
-                      </div>
-                    )}
-                    <p className="text-sm leading-relaxed">{msg.message}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Chat Input */}
-            <div className="p-4 bg-white border-t border-slate-200 text-slate-900">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Tanya tentang perawatan tanaman..."
-                  className="flex-1 px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:outline-none text-sm"
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!chatInput.trim()}
-                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
-                  style={{ backgroundColor: themeColors.primary }}
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

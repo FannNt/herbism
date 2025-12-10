@@ -14,9 +14,12 @@ import {
   Sparkles,
   Edit,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Bot,
+  Send,
+  MessageSquare
 } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { getPlantById, Plant } from "@/services/plantService"
 
 export default function PlantProfilePage() {
@@ -27,6 +30,31 @@ export default function PlantProfilePage() {
 
   const [plant, setPlant] = useState<Plant | null>(null)
   const [loading, setLoading] = useState(true)
+
+
+  const [questionInput, setQuestionInput] = useState("")
+  const [isConsulting, setIsConsulting] = useState(false)
+  const [faqList, setFaqList] = useState<Array<{q: string, a: string}>>([])
+
+  const handleConsultation = async () => {
+    if (!questionInput.trim() || !plant) return
+    
+    const currentQ = questionInput
+    setQuestionInput("") // Clear input immediately
+    setIsConsulting(true)
+
+    try {
+      // Call AI Service
+      
+      // Add to FAQ List (Newest on top)
+      setFaqList(prev => [{ q: currentQ, a: "" }, ...prev])
+    } catch (error) {
+      console.error(error)
+      alert("Maaf, Erbis sedang sibuk. Coba lagi nanti.")
+    } finally {
+      setIsConsulting(false)
+    }
+  }
 
   useEffect(() => {
     const fetchPlant = async () => {
@@ -277,6 +305,98 @@ export default function PlantProfilePage() {
             <Sparkles className="w-4 h-4" />
             <p>Tips ini dibuat khusus berdasarkan jenis tanaman dan kondisi perawatan Anda</p>
           </div>
+        </motion.div>
+
+        {/* FAQ Style Chatbot Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-6"
+        >
+           {/* Header & Input Section */}
+           <div className="bg-white rounded-3xl p-6 border border-emerald-100 shadow-lg">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200">
+                  <Bot className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-xl text-slate-900">Tanya Erbis</h3>
+                  <p className="text-slate-500 text-sm">Asisten ahli tanaman pribadi Anda</p>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={questionInput}
+                    onChange={(e) => setQuestionInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleConsultation()}
+                    placeholder={`Tanya apapun tentang ${plant.name}...`}
+                    className="flex-1 px-5 py-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all shadow-inner"
+                  />
+                  <button
+                    onClick={handleConsultation}
+                    disabled={!questionInput.trim() || isConsulting}
+                    className="w-14 h-auto rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white flex items-center justify-center shadow-lg shadow-emerald-200 active:scale-95 transition-all"
+                  >
+                    {isConsulting ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                       <Send className="w-6 h-6" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mt-2 ml-1">
+                  *Jawaban dihasilkan oleh AI dan dirancang untuk memberikan edukasi mendalam.
+                </p>
+              </div>
+           </div>
+
+           {/* FAQ Results List */}
+           <div className="space-y-4">
+              <AnimatePresence>
+                {faqList.map((item, idx) => (
+                  <motion.div
+                    key={`${idx}-${item.q.substring(0, 10)}`}
+                    initial={{ opacity: 0, y: 20, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    {/* Question Header */}
+                    <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex items-start gap-3">
+                      <div className="bg-emerald-100 p-1.5 rounded-lg mt-0.5">
+                        <MessageSquare className="w-4 h-4 text-emerald-700" />
+                      </div>
+                      <h4 className="font-bold text-slate-800 text-lg leading-snug">{item.q}</h4>
+                    </div>
+                    
+                    {/* Answer Body */}
+                    <div className="p-6 bg-white">
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0">
+                           <Bot className="w-6 h-6 text-emerald-600 mt-1" />
+                        </div>
+                        <div className="flex-1 prose prose-emerald prose-sm max-w-none">
+                           <p className="text-slate-600 leading-relaxed whitespace-pre-wrap font-medium">
+                             {item.a}
+                           </p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {faqList.length === 0 && !isConsulting && (
+                <div className="text-center py-10 opacity-50">
+                  <Bot className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                  <p className="text-slate-500 font-medium">Belum ada pertanyaan diajukan.</p>
+                </div>
+              )}
+           </div>
         </motion.div>
       </main>
     </div>

@@ -83,22 +83,57 @@ PENTING:
 - Jika ada kondisi kesehatan atau tujuan kesehatan user, pertimbangkan dalam memberikan tips perawatan khusus
 - Jika ada alergi user, WAJIB peringatkan jika tanaman ini bisa menyebabkan reaksi alergi`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        // Retry configuration
+        const MAX_RETRIES = 3;
+        const INITIAL_DELAY = 1000; // 1 second
 
-        // Clean up the response to extract JSON
-        let jsonText = text.trim();
+        let lastError;
 
-        // Remove markdown code blocks if present
-        jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                const text = response.text();
 
-        // Parse the JSON response
-        const aiData: PlantAIData = JSON.parse(jsonText);
+                // Clean up the response to extract JSON
+                let jsonText = text.trim();
 
-        return aiData;
-    } catch (error) {
+                // Remove markdown code blocks if present
+                jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+
+                // Parse the JSON response
+                const aiData: PlantAIData = JSON.parse(jsonText);
+
+                return aiData;
+            } catch (error: any) {
+                console.warn(`Attempt ${attempt} failed:`, error.message);
+                lastError = error;
+
+                // Check if it's a 503 error or overload error
+                const isOverloaded = error.message.includes('503') || error.message.includes('overloaded');
+
+                if (isOverloaded && attempt < MAX_RETRIES) {
+                    // Exponential backoff
+                    const delay = INITIAL_DELAY * Math.pow(2, attempt - 1);
+                    console.log(`Retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+
+                // If it's not a retryable error or we've exhausted retries, break loop
+                break;
+            }
+        }
+
+        // If we get here, all retries failed
+        console.error("All retry attempts failed:", lastError);
+        throw new Error("Layanan AI sedang sibuk. Mohon tunggu sebentar dan coba lagi.");
+    } catch (error: any) {
         console.error("Error calling Gemini AI:", error);
+        // Preserve the specific overload error message if that's what we threw above
+        if (error.message.includes("Layanan AI sedang sibuk")) {
+            throw error;
+        }
         throw new Error("Gagal memvalidasi tanaman dengan AI. Silakan coba lagi.");
     }
 }
