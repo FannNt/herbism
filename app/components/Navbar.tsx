@@ -67,6 +67,15 @@ export default function Navbar() {
     setActiveSection(sectionId)
     setShowMobileScanMenu(false)
     setShowMobileAkunMenu(false)
+    
+    if (sectionId === 'home') router.push('/')
+    if (sectionId === 'konsultasi') router.push('/consultation')
+    if (sectionId === 'rawat') router.push('/dashboardplant')
+    if (sectionId === 'wireless') router.push('/wirelessplant')
+    if (sectionId === 'scan-manfaat') router.push('/manfaat-tanaman')
+    if (sectionId === 'scan-penyakit') router.push('/diagnosa-tanaman')
+    if (sectionId === 'dashboard') router.push('/profile')
+    if (sectionId === 'akun') router.push('/profile')
   }
 
   const themeColors = getThemeColors()

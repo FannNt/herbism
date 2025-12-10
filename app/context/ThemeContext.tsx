@@ -1,14 +1,8 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from "react"
 
 type TherapyMode = "default" | "calm" | "energy" | "balance" | "healing"
-
-interface ThemeContextType {
-  currentMode: TherapyMode
-  setCurrentMode: (mode: TherapyMode) => void
-  getThemeColors: () => ThemeColors
-}
 
 interface ThemeColors {
   primary: string
@@ -18,7 +12,14 @@ interface ThemeColors {
   hover: string
 }
 
-const themeColors = {
+interface ThemeContextType {
+  currentMode: TherapyMode
+  setCurrentMode: (mode: TherapyMode) => void
+  getThemeColors: () => ThemeColors
+  themeColors: ThemeColors // Direct access to current theme colors
+}
+
+const themeColorsMap: Record<TherapyMode, ThemeColors> = {
   default: {
     primary: "#10b981", // emerald-600
     secondary: "#14b8a6", // teal-600
@@ -64,28 +65,60 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [currentMode, setCurrentModeState] = useState<TherapyMode>("default")
   const [isInitialized, setIsInitialized] = useState(false)
 
+  // Load theme from localStorage on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as TherapyMode | null
-    if (savedTheme && themeColors[savedTheme]) {
+    if (savedTheme && themeColorsMap[savedTheme]) {
       setCurrentModeState(savedTheme)
     }
     setIsInitialized(true)
   }, [])
 
-  // Save theme to localStorage 
-  const setCurrentMode = (mode: TherapyMode) => {
+  // Listen for storage changes from other tabs/windows
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === THEME_STORAGE_KEY && e.newValue) {
+        const newTheme = e.newValue as TherapyMode
+        if (themeColorsMap[newTheme]) {
+          setCurrentModeState(newTheme)
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
+  // Save theme to localStorage and update state
+  const setCurrentMode = useCallback((mode: TherapyMode) => {
     setCurrentModeState(mode)
     localStorage.setItem(THEME_STORAGE_KEY, mode)
-  }
+    // Dispatch storage event for same-tab updates
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: THEME_STORAGE_KEY,
+      newValue: mode,
+    }))
+  }, [])
 
-  const getThemeColors = () => themeColors[currentMode]
+  // Memoize theme colors based on current mode
+  const themeColors = useMemo(() => themeColorsMap[currentMode], [currentMode])
+
+  const getThemeColors = useCallback(() => themeColorsMap[currentMode], [currentMode])
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    currentMode,
+    setCurrentMode,
+    getThemeColors,
+    themeColors,
+  }), [currentMode, setCurrentMode, getThemeColors, themeColors])
 
   if (!isInitialized) {
     return null
   }
 
   return (
-    <ThemeContext.Provider value={{ currentMode, setCurrentMode, getThemeColors }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   )

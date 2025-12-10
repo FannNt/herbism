@@ -18,7 +18,22 @@ import {
   LogOut,
   X,
   MessageCircle,
+  ChevronDown,
+  MapPin,
+  Loader2,
 } from "lucide-react";
+
+
+interface Province {
+  id: string;
+  name: string;
+}
+
+interface Regency {
+  id: string;
+  province_id: string;
+  name: string;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -45,6 +60,61 @@ export default function ProfilePage() {
   const [customHealthCondition, setCustomHealthCondition] = useState("");
   const [customHealthGoal, setCustomHealthGoal] = useState("");
   const [customAllergy, setCustomAllergy] = useState("");
+
+  // State for location dropdowns
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [regencies, setRegencies] = useState<Regency[]>([]);
+  const [selectedProvince, setSelectedProvince] = useState<string>("");
+  const [selectedRegency, setSelectedRegency] = useState<string>("");
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
+  const [isLoadingRegencies, setIsLoadingRegencies] = useState(false);
+  const [isProvinceDropdownOpen, setIsProvinceDropdownOpen] = useState(false);
+  const [isRegencyDropdownOpen, setIsRegencyDropdownOpen] = useState(false);
+  const [provinceSearch, setProvinceSearch] = useState("");
+  const [regencySearch, setRegencySearch] = useState("");
+
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      setIsLoadingProvinces(true);
+      try {
+        const response = await fetch("https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json");
+        const data = await response.json();
+        setProvinces(data);
+      } catch (error) {
+        console.error("Error fetching provinces:", error);
+      } finally {
+        setIsLoadingProvinces(false);
+      }
+    };
+    fetchProvinces();
+  }, []);
+
+
+  useEffect(() => {
+    const fetchRegencies = async () => {
+      if (!selectedProvince) {
+        setRegencies([]);
+        return;
+      }
+      setIsLoadingRegencies(true);
+      try {
+        const response = await fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${selectedProvince}.json`);
+        const data = await response.json();
+        setRegencies(data);
+      } catch (error) {
+        console.error("Error fetching regencies:", error);
+      } finally {
+        setIsLoadingRegencies(false);
+      }
+    };
+    fetchRegencies();
+  }, [selectedProvince]);
+
+  // Helper function to format name (Title Case)
+  const formatName = (name: string) => {
+    return name.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+  };
 
   // Health options (same as onboarding)
   const healthConditions = [
@@ -542,16 +612,153 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
+                      {/* Province Dropdown */}
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Wilayah/Kota</label>
-                        <input
-                          type="text"
-                          value={formData.region}
-                          onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all text-slate-900"
-                          required
-                        />
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          <MapPin className="w-4 h-4 inline mr-1" />
+                          Provinsi
+                        </label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsProvinceDropdownOpen(!isProvinceDropdownOpen);
+                              setIsRegencyDropdownOpen(false);
+                            }}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all bg-white text-left flex items-center justify-between"
+                          >
+                            <span className={selectedProvince ? "text-slate-900" : "text-slate-400"}>
+                              {selectedProvince 
+                                ? formatName(provinces.find(p => p.id === selectedProvince)?.name || "")
+                                : "Pilih Provinsi"}
+                            </span>
+                            {isLoadingProvinces ? (
+                              <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+                            ) : (
+                              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${isProvinceDropdownOpen ? 'rotate-180' : ''}`} />
+                            )}
+                          </button>
+                          
+                          {isProvinceDropdownOpen && (
+                            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-64 overflow-hidden">
+                              <div className="p-2 border-b border-slate-100">
+                                <input
+                                  type="text"
+                                  value={provinceSearch}
+                                  onChange={(e) => setProvinceSearch(e.target.value)}
+                                  placeholder="Cari provinsi..."
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div className="overflow-y-auto max-h-48">
+                                {provinces
+                                  .filter(p => p.name.toLowerCase().includes(provinceSearch.toLowerCase()))
+                                  .map((province) => (
+                                    <button
+                                      key={province.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedProvince(province.id);
+                                        setSelectedRegency("");
+                                        setFormData({ ...formData, region: "" });
+                                        setIsProvinceDropdownOpen(false);
+                                        setProvinceSearch("");
+                                      }}
+                                      className={`w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors text-sm ${
+                                        selectedProvince === province.id ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-slate-700'
+                                      }`}
+                                    >
+                                      {formatName(province.name)}
+                                    </button>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Regency/City Dropdown */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          <MapPin className="w-4 h-4 inline mr-1" />
+                          Kota/Kabupaten
+                        </label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedProvince) {
+                                setIsRegencyDropdownOpen(!isRegencyDropdownOpen);
+                                setIsProvinceDropdownOpen(false);
+                              }
+                            }}
+                            disabled={!selectedProvince}
+                            className={`w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all bg-white text-left flex items-center justify-between ${
+                              !selectedProvince ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            <span className={selectedRegency ? "text-slate-900" : "text-slate-400"}>
+                              {selectedRegency 
+                                ? formatName(regencies.find(r => r.id === selectedRegency)?.name || "")
+                                : selectedProvince ? "Pilih Kota/Kabupaten" : "Pilih provinsi terlebih dahulu"}
+                            </span>
+                            {isLoadingRegencies ? (
+                              <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+                            ) : (
+                              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${isRegencyDropdownOpen ? 'rotate-180' : ''}`} />
+                            )}
+                          </button>
+                          
+                          {isRegencyDropdownOpen && regencies.length > 0 && (
+                            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-64 overflow-hidden">
+                              <div className="p-2 border-b border-slate-100">
+                                <input
+                                  type="text"
+                                  value={regencySearch}
+                                  onChange={(e) => setRegencySearch(e.target.value)}
+                                  placeholder="Cari kota/kabupaten..."
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div className="overflow-y-auto max-h-48">
+                                {regencies
+                                  .filter(r => r.name.toLowerCase().includes(regencySearch.toLowerCase()))
+                                  .map((regency) => (
+                                    <button
+                                      key={regency.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedRegency(regency.id);
+                                        const provinceName = provinces.find(p => p.id === selectedProvince)?.name || "";
+                                        const regionValue = `${formatName(regency.name)}, ${formatName(provinceName)}`;
+                                        setFormData({ ...formData, region: regionValue });
+                                        setIsRegencyDropdownOpen(false);
+                                        setRegencySearch("");
+                                      }}
+                                      className={`w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors text-sm ${
+                                        selectedRegency === regency.id ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-slate-700'
+                                      }`}
+                                    >
+                                      {formatName(regency.name)}
+                                    </button>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Selected Region Display */}
+                      {formData.region && (
+                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                          <div className="flex items-center gap-2 text-emerald-700">
+                            <MapPin className="w-4 h-4" />
+                            <span className="text-sm font-medium">{formData.region}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Health Condition */}

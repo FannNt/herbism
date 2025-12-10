@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
-import { Upload, X, Loader2, Leaf, Heart, Sparkles, Droplets, Sun, Shield, Zap, Apple, Brain, Flower2, Wind, Thermometer } from "lucide-react"
+import { Upload, X, Loader2, Leaf, Heart, Sparkles, Droplets, Sun, Shield, Zap, Apple, Brain, Flower2, Wind, Thermometer, AlertTriangle } from "lucide-react"
 import Navbar from "../components/Navbar"
 import { useTheme } from "../context/ThemeContext"
 
@@ -13,7 +13,7 @@ interface PlantBenefit {
   category: string
   description: string
   benefits: {
-    icon: any
+    icon: string
     title: string
     description: string
     color: string
@@ -29,111 +29,94 @@ interface PlantBenefit {
   warnings: string[]
 }
 
+// Icon mapping for dynamic icons from API
+import type { LucideIcon } from "lucide-react"
+
+const iconMap: Record<string, LucideIcon> = {
+  Shield, Thermometer, Apple, Zap, Heart, Brain, Leaf, Flower2, Wind, Droplets
+}
+
 export default function ManfaatTanamanPage() {
-  const { getThemeColors } = useTheme()
-  const themeColors = getThemeColors()
+  const { themeColors } = useTheme()
   
   const [image, setImage] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<PlantBenefit | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const imageUrl = URL.createObjectURL(file)
       setImage(imageUrl)
+      setImageFile(file)
       setResult(null)
+      setError(null)
     }
   }
 
-  const handleAnalyze = () => {
-    if (!image) return
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = (error) => reject(error)
+    })
+  }
+
+  const handleAnalyze = async () => {
+    if (!image || !imageFile) return
 
     setIsAnalyzing(true)
-    // Simulate AI response
-    setTimeout(() => {
-      setIsAnalyzing(false)
-      setResult({
-        name: "Jahe Merah",
-        scientificName: "Zingiber officinale var. rubrum",
-        category: "Rimpang / Herba",
-        description: "Jahe merah adalah varietas jahe dengan rimpang berwarna merah kecoklatan. Tanaman ini telah digunakan secara tradisional selama ribuan tahun untuk berbagai keperluan pengobatan dan kuliner di Indonesia dan Asia.",
-        benefits: [
-          {
-            icon: Shield,
-            title: "Meningkatkan Imunitas",
-            description: "Mengandung gingerol yang bersifat antioksidan dan antiinflamasi untuk memperkuat sistem kekebalan tubuh",
-            color: "emerald"
-          },
-          {
-            icon: Thermometer,
-            title: "Menghangatkan Tubuh",
-            description: "Efek termogenik alami yang membantu menghangatkan tubuh dan melancarkan peredaran darah",
-            color: "orange"
-          },
-          {
-            icon: Apple,
-            title: "Melancarkan Pencernaan",
-            description: "Membantu mengatasi mual, kembung, dan gangguan pencernaan lainnya secara alami",
-            color: "green"
-          },
-          {
-            icon: Zap,
-            title: "Anti-Peradangan",
-            description: "Senyawa aktif gingerol dan shogaol efektif mengurangi peradangan dan nyeri sendi",
-            color: "yellow"
-          },
-          {
-            icon: Heart,
-            title: "Kesehatan Jantung",
-            description: "Membantu menurunkan kadar kolesterol dan menjaga tekanan darah tetap stabil",
-            color: "red"
-          },
-          {
-            icon: Brain,
-            title: "Fungsi Otak",
-            description: "Antioksidan melindungi sel otak dan meningkatkan fungsi kognitif",
-            color: "purple"
-          }
-        ],
-        usage: [
-          {
-            title: "Minuman Hangat",
-            description: "Iris tipis 2-3 ruas jahe merah, rebus dengan 2 gelas air hingga tersisa setengah. Tambahkan madu atau gula merah sesuai selera."
-          },
-          {
-            title: "Jamu Tradisional",
-            description: "Parut jahe merah, peras airnya, campur dengan kunyit, temulawak untuk membuat jamu beras kencur atau wedang jahe."
-          },
-          {
-            title: "Bumbu Masakan",
-            description: "Gunakan sebagai bumbu dasar masakan untuk menambah aroma dan cita rasa, sekaligus mendapat manfaat kesehatannya."
-          },
-          {
-            title: "Kompres Hangat",
-            description: "Parut jahe, hangatkan sedikit, bungkus dengan kain dan tempelkan pada area yang nyeri atau pegal."
-          }
-        ],
-        nutrition: [
-          { name: "Gingerol", value: "Tinggi" },
-          { name: "Shogaol", value: "Sedang" },
-          { name: "Vitamin C", value: "5mg/100g" },
-          { name: "Kalium", value: "415mg/100g" },
-          { name: "Magnesium", value: "43mg/100g" },
-          { name: "Fosfor", value: "34mg/100g" }
-        ],
-        warnings: [
-          "Konsumsi berlebihan dapat menyebabkan gangguan lambung pada sebagian orang",
-          "Hindari penggunaan bersamaan dengan obat pengencer darah tanpa konsultasi dokter",
-          "Wanita hamil sebaiknya berkonsultasi dengan dokter sebelum konsumsi rutin"
-        ]
+    setError(null)
+
+    try {
+      // Convert image to base64
+      const base64Image = await fileToBase64(imageFile)
+
+      // Call API endpoint
+      const response = await fetch('/api/scan-manfaat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          image: base64Image,
+          type: 'benefit'
+        }),
       })
-    }, 2500)
+
+      if (!response.ok) {
+        throw new Error('Gagal menganalisis gambar')
+      }
+
+      const data = await response.json()
+      
+      if (data.result) {
+        setResult(data.result)
+      } else {
+        throw new Error('Tidak ada hasil dari analisis')
+      }
+    } catch (err: any) {
+      console.error('Analysis error:', err)
+      setError(err.message || 'Terjadi kesalahan saat menganalisis gambar')
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const clearImage = () => {
     setImage(null)
+    setImageFile(null)
     setResult(null)
+    setError(null)
+  }
+
+  // Get icon component from string
+  const getIconComponent = (iconName: string) => {
+    return iconMap[iconName] || Leaf
   }
 
   const getBenefitColor = (color: string) => {
@@ -175,9 +158,9 @@ export default function ManfaatTanamanPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="md:col-span-4 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center text-center relative overflow-hidden"
           >
-            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-emerald-50 to-transparent" />         
+            <div className="absolute top-0 left-0 w-full h-32" style={{ background: `linear-gradient(to bottom, ${themeColors.primary}10, transparent)` }} />
             <div className="relative z-10 w-48 h-48 md:w-56 md:h-56 mb-4 mt-4">
-              <div className="absolute inset-0 bg-emerald-100 rounded-full blur-3xl opacity-30 animate-pulse" />
+              <div className="absolute inset-0 rounded-full blur-3xl opacity-30 animate-pulse" style={{ backgroundColor: `${themeColors.primary}30` }} />
               <Image
                 src="/Erbis.jpg"
                 alt="Erbis Mascot"
@@ -306,7 +289,7 @@ export default function ManfaatTanamanPage() {
                   {/* Benefits Grid - 2x3 on desktop */}
                   {result.benefits.map((benefit, idx) => {
                     const colorClasses = getBenefitColor(benefit.color)
-                    const BenefitIcon = benefit.icon
+                    const BenefitIcon = getIconComponent(benefit.icon)
                     
                     return (
                       <motion.div
@@ -372,7 +355,8 @@ export default function ManfaatTanamanPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="md:col-span-5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden"
+                    className="md:col-span-5 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden"
+                    style={{ background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})` }}
                   >
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-xl" />
@@ -406,7 +390,7 @@ export default function ManfaatTanamanPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
-                    className="md:col-span-12 bg-amber-50 rounded-3xl p-6 border border-amber-100"
+                    className="md:col-span-12 bg-amber-50 rounded-3xl p-6 border border-amber-100 mb-18 md:mb-0"
                   >
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
@@ -430,6 +414,27 @@ export default function ManfaatTanamanPage() {
                         </div>
                       </div>
                     </div>
+                  </motion.div>
+
+                  {/* Scan Lagi Button */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="md:col-span-12 flex justify-center"
+                  >
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={clearImage}
+                      className="px-8 py-4 rounded-xl text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
+                      style={{ background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})` }}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Scan Tanaman Lain
+                    </motion.button>
                   </motion.div>
 
                 </div>
