@@ -1,105 +1,57 @@
 "use client"
 import { motion } from "framer-motion"
 import { useTheme } from "../../context/ThemeContext"
-import { useState } from "react"
-import { Package, Clock, CheckCircle, XCircle, Eye, MessageCircle, MapPin, Calendar, Sprout, ArrowLeft } from "lucide-react"
+import { useAuth } from "../../context/AuthContext"
+import { useState, useEffect } from "react"
+import { Package, Clock, CheckCircle, XCircle, Eye, MessageCircle, MapPin, Calendar, Sprout, ArrowLeft, Loader2, DollarSign } from "lucide-react"
 import Link from "next/link"
 import Navbar from "../../components/Navbar"
+import { db } from "@/lib/firebase"
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore"
 
 interface Order {
   id: string
   orderId: string
-  planterName: string
-  planterLocation: string
-  plantType: string
+  productId: string
+  planterId: string
+  buyerId: string
+  buyerName: string
+  productName: string
   quantity: number
-  duration: number
+  pricePerUnit: number
   totalPrice: number
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
-  orderDate: string
-  startDate?: string
-  estimatedHarvest?: string
-  progress: number
-  lastUpdate: string
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  paymentStatus: 'pending' | 'paid' | 'failed'
+  createdAt: any
+  notes?: string
 }
 
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "1",
-    orderId: "WP1733587200001",
-    planterName: "Budi Santoso",
-    planterLocation: "Bandung, Jawa Barat",
-    plantType: "Jahe Merah",
-    quantity: 50,
-    duration: 6,
-    totalPrice: 755000,
-    status: 'in_progress',
-    orderDate: "2024-11-01",
-    startDate: "2024-11-05",
-    estimatedHarvest: "2025-05-05",
-    progress: 45,
-    lastUpdate: "2024-12-05"
-  },
-  {
-    id: "2",
-    orderId: "WP1733587200002",
-    planterName: "Dewi Lestari",
-    planterLocation: "Malang, Jawa Timur",
-    plantType: "Kunyit",
-    quantity: 30,
-    duration: 6,
-    totalPrice: 545000,
-    status: 'completed',
-    orderDate: "2024-09-15",
-    startDate: "2024-09-18",
-    estimatedHarvest: "2025-03-18",
-    progress: 100,
-    lastUpdate: "2024-11-20"
-  },
-  {
-    id: "3",
-    orderId: "WP1733587200003",
-    planterName: "Rina Wijaya",
-    planterLocation: "Surabaya, Jawa Timur",
-    plantType: "Daun Mint",
-    quantity: 20,
-    duration: 3,
-    totalPrice: 325000,
-    status: 'pending',
-    orderDate: "2024-12-06",
-    progress: 0,
-    lastUpdate: "2024-12-06"
-  },
-  {
-    id: "4",
-    orderId: "WP1733587200004",
-    planterName: "Ahmad Hidayat",
-    planterLocation: "Bogor, Jawa Barat",
-    plantType: "Sereh",
-    quantity: 40,
-    duration: 6,
-    totalPrice: 405000,
-    status: 'cancelled',
-    orderDate: "2024-10-20",
-    progress: 0,
-    lastUpdate: "2024-10-22"
-  }
-]
-
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: any }> = {
   pending: {
-    label: 'Menunggu',
+    label: 'Menunggu Konfirmasi',
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-100',
     icon: Clock
   },
-  in_progress: {
-    label: 'Sedang Ditanam',
+  confirmed: {
+    label: 'Dikonfirmasi',
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
+    icon: CheckCircle
+  },
+  processing: {
+    label: 'Sedang Diproses',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-100',
     icon: Sprout
   },
-  completed: {
+  shipped: {
+    label: 'Dikirim',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-100',
+    icon: Package
+  },
+  delivered: {
     label: 'Selesai',
     color: 'text-green-600',
     bgColor: 'bg-green-100',
@@ -116,17 +68,63 @@ const STATUS_CONFIG = {
 export default function OrdersPage() {
   const { getThemeColors } = useTheme()
   const themeColors = getThemeColors()
+  const { user } = useAuth()
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [orders, setOrders] = useState<Order[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch orders from Firebase planterOrders collection
+  useEffect(() => {
+    if (!user) {
+      setIsLoading(false)
+      return
+    }
+
+    const q = query(
+      collection(db, "planterOrders"),
+      where("buyerId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    )
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedOrders: Order[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[]
+      
+      setOrders(fetchedOrders)
+      setIsLoading(false)
+    }, (error) => {
+      console.error("Error fetching orders:", error)
+      setIsLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [user])
 
   const filteredOrders = filterStatus === 'all' 
-    ? MOCK_ORDERS 
-    : MOCK_ORDERS.filter(order => order.status === filterStatus)
+    ? orders 
+    : orders.filter(order => order.status === filterStatus)
 
   const stats = {
-    total: MOCK_ORDERS.length,
-    pending: MOCK_ORDERS.filter(o => o.status === 'pending').length,
-    in_progress: MOCK_ORDERS.filter(o => o.status === 'in_progress').length,
-    completed: MOCK_ORDERS.filter(o => o.status === 'completed').length
+    total: orders.length,
+    pending: orders.filter(o => o.status === 'pending').length,
+    processing: orders.filter(o => o.status === 'confirmed' || o.status === 'processing').length,
+    delivered: orders.filter(o => o.status === 'delivered').length
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        <Navbar />
+        <div className="pt-32 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: themeColors.primary }} />
+            <p className="text-slate-600">Memuat orderan...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -177,12 +175,12 @@ export default function OrdersPage() {
             </div>
             <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
               <Sprout className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-              <div className="text-3xl font-bold text-slate-900">{stats.in_progress}</div>
-              <div className="text-sm text-slate-600">Berlangsung</div>
+              <div className="text-3xl font-bold text-slate-900">{stats.processing}</div>
+              <div className="text-sm text-slate-600">Diproses</div>
             </div>
             <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
               <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-600" />
-              <div className="text-3xl font-bold text-slate-900">{stats.completed}</div>
+              <div className="text-3xl font-bold text-slate-900">{stats.delivered}</div>
               <div className="text-sm text-slate-600">Selesai</div>
             </div>
           </motion.div>
@@ -198,8 +196,8 @@ export default function OrdersPage() {
               {[
                 { value: 'all', label: 'Semua' },
                 { value: 'pending', label: 'Menunggu' },
-                { value: 'in_progress', label: 'Berlangsung' },
-                { value: 'completed', label: 'Selesai' },
+                { value: 'processing', label: 'Diproses' },
+                { value: 'delivered', label: 'Selesai' },
                 { value: 'cancelled', label: 'Dibatalkan' }
               ].map((filter) => (
                 <motion.button
@@ -248,12 +246,12 @@ export default function OrdersPage() {
                             {statusConfig.label}
                           </span>
                         </div>
-                        <p className="text-slate-500">Dipesan pada {new Date(order.orderDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                        <p className="text-slate-500">Dipesan pada {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}</p>
                       </div>
                       <div className="mt-4 md:mt-0 text-right">
                         <div className="text-sm text-slate-500 mb-1">Total Pembayaran</div>
                         <div className="text-2xl font-bold" style={{ color: themeColors.primary }}>
-                          Rp {order.totalPrice.toLocaleString('id-ID')}
+                          Rp {order.totalPrice?.toLocaleString('id-ID')}
                         </div>
                       </div>
                     </div>
@@ -265,52 +263,40 @@ export default function OrdersPage() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-slate-600">
                             <Sprout className="w-4 h-4" />
-                            <span>{order.plantType} - {order.quantity} tanaman</span>
+                            <span>{order.productName} - {order.quantity} unit</span>
                           </div>
                           <div className="flex items-center gap-2 text-slate-600">
-                            <Calendar className="w-4 h-4" />
-                            <span>Durasi: {order.duration} bulan</span>
+                            <DollarSign className="w-4 h-4" />
+                            <span>Harga: Rp {order.pricePerUnit?.toLocaleString('id-ID')} / unit</span>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <MapPin className="w-4 h-4" />
-                            <span>{order.planterName} - {order.planterLocation}</span>
-                          </div>
+                          {order.notes && (
+                            <div className="flex items-start gap-2 text-slate-600">
+                              <MessageCircle className="w-4 h-4 mt-0.5" />
+                              <span>Catatan: {order.notes}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {order.status === 'in_progress' && (
+                      {order.status === 'processing' && (
                         <div>
-                          <h4 className="font-semibold text-slate-900 mb-3">Progress Penanaman</h4>
-                          <div className="space-y-3">
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600">Kemajuan</span>
-                                <span className="text-sm font-semibold text-slate-900">{order.progress}%</span>
-                              </div>
-                              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                                <motion.div
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${order.progress}%` }}
-                                  transition={{ duration: 1, delay: 0.5 }}
-                                  className="h-full rounded-full"
-                                  style={{ background: `linear-gradient(90deg, ${themeColors.primary}, ${themeColors.secondary})` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="text-sm text-slate-600">
-                              Estimasi panen: {order.estimatedHarvest && new Date(order.estimatedHarvest).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </div>
+                          <h4 className="font-semibold text-slate-900 mb-3">Status Pesanan</h4>
+                          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                            <Sprout className="w-6 h-6 text-indigo-600 mb-2" />
+                            <p className="text-sm text-indigo-800">
+                              Pesanan Anda sedang diproses oleh planter. Anda akan mendapat notifikasi ketika pesanan siap dikirim.
+                            </p>
                           </div>
                         </div>
                       )}
 
-                      {order.status === 'completed' && (
+                      {order.status === 'delivered' && (
                         <div>
-                          <h4 className="font-semibold text-slate-900 mb-3">Status Panen</h4>
+                          <h4 className="font-semibold text-slate-900 mb-3">Status Pesanan</h4>
                           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                             <CheckCircle className="w-6 h-6 text-green-600 mb-2" />
                             <p className="text-sm text-green-800">
-                              Panen berhasil! Hasil telah didistribusikan sesuai kesepakatan bagi hasil.
+                              Pesanan telah selesai! Terima kasih telah menggunakan layanan WirelessPlant.
                             </p>
                           </div>
                         </div>
@@ -331,8 +317,8 @@ export default function OrdersPage() {
                         </motion.button>
                       </Link>
                       
-                      {(order.status === 'in_progress' || order.status === 'completed') && (
-                        <Link href={`/wirelessplant/chat/${order.id}`} className="flex-1 min-w-[200px]">
+                      {(order.status === 'processing' || order.status === 'confirmed' || order.status === 'delivered') && (
+                        <Link href={`/wirelessplant/chat-planter/${order.planterId}`} className="flex-1 min-w-[200px]">
                           <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}

@@ -1,12 +1,15 @@
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
+export type UserRole = "user" | "admin" | "planter";
+
 export type User = {
-  uid?: string; 
+  uid?: string;
   email: string;
   name?: string;
   username?: string;
   city?: string;
   isOnboardingComplete?: boolean;
+  role?: UserRole;
   // Data bagian onboarding
   age?: number;
   gender?: "male" | "female";

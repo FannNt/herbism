@@ -21,6 +21,11 @@ import {
   ChevronDown,
   MapPin,
   Loader2,
+  Shield,
+  Sprout,
+  Package,
+  ShoppingCart,
+  ArrowRight,
 } from "lucide-react";
 
 
@@ -319,6 +324,65 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Admin Dashboard Card */}
+          {user.role === 'admin' && (
+            <div 
+              className="rounded-2xl p-5 shadow-lg border border-white/10"
+              style={{ 
+                background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})`,
+              }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white">Admin Dashboard</p>
+                  <p className="text-sm text-white/90">Kelola pendaftaran planter</p>
+                </div>
+              </div>
+              <button
+                onClick={() => router.push('/admin')}
+                className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 backdrop-blur-sm border border-white/10"
+              >
+                <span>Buka Dashboard Admin</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Planter Dashboard Card */}
+          {user.role === 'planter' && (
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 border border-emerald-400 shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Sprout className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white">Planter Dashboard</p>
+                  <p className="text-sm text-white/80">Kelola produk & pesanan</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-white/20 rounded-xl p-3 text-center">
+                  <Package className="w-5 h-5 text-white mx-auto mb-1" />
+                  <p className="text-xs text-white/80">Produk</p>
+                </div>
+                <div className="bg-white/20 rounded-xl p-3 text-center">
+                  <ShoppingCart className="w-5 h-5 text-white mx-auto mb-1" />
+                  <p className="text-xs text-white/80">Pesanan</p>
+                </div>
+              </div>
+              <button
+                onClick={() => router.push('/planter-dashboard')}
+                className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2"
+              >
+                <span>Buka Dashboard Planter</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Health Condition */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">

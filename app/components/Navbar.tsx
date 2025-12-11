@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 import { useTheme } from "../context/ThemeContext"
 import { useAuth } from "../context/AuthContext"
 import { logout } from "@/services/authService"
-import { Home, MessageCircle, ScanLine, Sprout, Users, User, Leaf, ShieldAlert, LogOut, Settings } from "lucide-react"
+import { Home, MessageCircle, ScanLine, Sprout, Users, User, Leaf, ShieldAlert, LogOut, Settings, Shield, Package } from "lucide-react"
 import HerbismLogo from "./HerbismLogo"
 
 export default function Navbar() {
@@ -59,6 +59,7 @@ export default function Navbar() {
   ]
 
   const akunOptions = [
+    { id: "orders", label: "Orderan Saya", icon: Package, description: "Lihat status pesanan" },
     { id: "rawat", label: "Rawat Tanaman", icon: Sprout, description: "Kelola perawatan tanaman" },
     { id: "dashboard", label: "Dashboard Akun", icon: User, description: "Profil & pengaturan" }
   ]
@@ -76,6 +77,7 @@ export default function Navbar() {
     if (sectionId === 'scan-penyakit') router.push('/diagnosa-tanaman')
     if (sectionId === 'dashboard') router.push('/profile')
     if (sectionId === 'akun') router.push('/profile')
+    if (sectionId === 'orders') router.push('/wirelessplant/orders')
   }
 
   const themeColors = getThemeColors()
@@ -198,15 +200,19 @@ export default function Navbar() {
                 </div>
               ))}
             </motion.div>
-            {/* Account Desktop */}
+            {/* Cart & Account Desktop */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="relative"
-              onMouseEnter={() => user && setShowUserDropdown(true)}
-              onMouseLeave={() => setShowUserDropdown(false)}
+              className="flex items-center gap-3"
             >
+              {/* Account Dropdown */}
+              <div
+                className="relative"
+                onMouseEnter={() => user && setShowUserDropdown(true)}
+                onMouseLeave={() => setShowUserDropdown(false)}
+              >
               {user ? (
                 <>
                   {/* User Button */}
@@ -244,6 +250,42 @@ export default function Navbar() {
                               <span className="text-sm font-medium text-slate-700">Profil Saya</span>
                             </motion.button>
                           </Link>
+
+                          <Link href="/wirelessplant/orders">
+                            <motion.button
+                              whileHover={{ x: 4 }}
+                              className="w-full px-4 py-3 flex items-center gap-3 rounded-xl transition-all duration-200 hover:bg-slate-50"
+                            >
+                              <Package size={18} className="text-slate-600" />
+                              <span className="text-sm font-medium text-slate-700">Orderan Saya</span>
+                            </motion.button>
+                          </Link>
+
+                          {/* Admin Dashboard Link */}
+                          {user.role === 'admin' && (
+                            <Link href="/admin">
+                              <motion.button
+                                whileHover={{ x: 4 }}
+                                className="w-full px-4 py-3 flex items-center gap-3 rounded-xl transition-all duration-200 hover:bg-purple-50"
+                              >
+                                <Shield size={18} className="text-purple-600" />
+                                <span className="text-sm font-medium text-purple-600">Admin Dashboard</span>
+                              </motion.button>
+                            </Link>
+                          )}
+
+                          {/* Planter Dashboard Link */}
+                          {user.role === 'planter' && (
+                            <Link href="/planter-dashboard">
+                              <motion.button
+                                whileHover={{ x: 4 }}
+                                className="w-full px-4 py-3 flex items-center gap-3 rounded-xl transition-all duration-200 hover:bg-emerald-50"
+                              >
+                                <Package size={18} className="text-emerald-600" />
+                                <span className="text-sm font-medium text-emerald-600">Planter Dashboard</span>
+                              </motion.button>
+                            </Link>
+                          )}
 
                           <motion.button
                             whileHover={{ x: 4 }}
@@ -298,6 +340,7 @@ export default function Navbar() {
                   </Link>
                 </div>
               )}
+              </div>
             </motion.div>
           </div>
         </div>

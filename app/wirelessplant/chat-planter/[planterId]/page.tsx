@@ -4,19 +4,16 @@ import { useTheme } from "../../../context/ThemeContext"
 import { useState, useRef, useEffect } from "react"
 import { useAuth } from "../../../context/AuthContext"
 import { 
-  ArrowLeft, Send, Phone, Video, MoreVertical, 
-  Image as ImageIcon, Paperclip, Smile, Check, CheckCheck,
-  Sprout, Calendar, MapPin, X, Loader2, Package
+  ArrowLeft, Send, Sprout, X, Loader2, Package, MessageCircle, Check, CheckCheck, Video
 } from "lucide-react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Navbar from "../../../components/Navbar"
 import { db } from "@/lib/firebase"
 import { 
-  doc, getDoc, collection, addDoc, query, orderBy, 
-  onSnapshot, serverTimestamp, Timestamp, updateDoc 
+  doc, getDoc, setDoc, collection, addDoc, query, orderBy, 
+  onSnapshot, serverTimestamp, Timestamp, where, getDocs 
 } from "firebase/firestore"
-import type { PlanterOrder } from "@/services/planterService"
 
 interface Message {
   id: string
@@ -28,48 +25,132 @@ interface Message {
   isRead: boolean
 }
 
-export default function ChatRoomPage() {
+interface PlanterInfo {
+  id: string
+  fullName: string
+  city: string
+  province: string
+  specialization: string[]
+  customPlants: string[]
+  userId?: string
+}
+
+export default function ChatPlanterPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const { getThemeColors } = useTheme()
   const themeColors = getThemeColors()
   
-  const [order, setOrder] = useState<PlanterOrder | null>(null)
+  const [planterInfo, setPlanterInfo] = useState<PlanterInfo | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [messageInput, setMessageInput] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
+  const [chatRoomId, setChatRoomId] = useState<string>("")
+  const [chatRoomData, setChatRoomData] = useState<any>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  // Fetch order data
+  // Fetch planter info and setup chat room
   useEffect(() => {
-    if (!params.orderId) return
+    if (!params.planterId || !user) return
     
-    const fetchOrder = async () => {
+    const setupChat = async () => {
       try {
-        const orderDoc = await getDoc(doc(db, "planterOrders", params.orderId as string))
-        if (orderDoc.exists()) {
-          setOrder({ id: orderDoc.id, ...orderDoc.data() } as PlanterOrder)
+        let planterData: PlanterInfo | null = null
+        let planterUserId = params.planterId as string
+
+        // First try to find by document ID
+        const planterDoc = await getDoc(doc(db, "planterRegistrations", params.planterId as string))
+        if (planterDoc.exists()) {
+          const data = planterDoc.data()
+          planterData = { id: planterDoc.id, ...data } as PlanterInfo
+          planterUserId = data.userId || planterDoc.id
+        } else {
+          // If not found by document ID, try to find by userId
+          const q = query(
+            collection(db, "planterRegistrations"),
+            where("userId", "==", params.planterId)
+          )
+          const snapshot = await getDocs(q)
+          if (!snapshot.empty) {
+            const doc = snapshot.docs[0]
+            const data = doc.data()
+            planterData = { id: doc.id, ...data } as PlanterInfo
+            planterUserId = data.userId || doc.id
+          }
+        }
+
+        if (planterData) {
+          setPlanterInfo(planterData)
+        }
+
+        // Determine Room ID
+        // If logged in user is the planter, we need buyerId from params
+        let roomId = ""
+        const isPlanterView = user.uid === planterUserId
+        const buyerId = searchParams.get('buyerId')
+
+        if (isPlanterView) {
+          if (!buyerId) {
+            console.error("Planter needs buyerId to chat")
+            setIsLoading(false)
+            return 
+          }
+           roomId = [buyerId, planterUserId].sort().join("_")
+        } else {
+           roomId = [user.uid, planterUserId].sort().join("_")
+        }
+
+        setChatRoomId(roomId)
+
+        // Initialize chat room if not exists (only if Buyer initiates)
+        const chatRoomRef = doc(db, "planterChats", roomId)
+        const chatRoomSnap = await getDoc(chatRoomRef)
+        
+        if (!chatRoomSnap.exists() && !isPlanterView) {
+          const newRoomData = {
+            userId: user.uid,
+            userName: user.name,
+            userEmail: user.email,
+            planterId: planterUserId,
+            planterName: planterData?.fullName || "Planter",
+            createdAt: serverTimestamp(),
+            lastMessageAt: serverTimestamp()
+          }
+          await setDoc(chatRoomRef, newRoomData)
+          setChatRoomData(newRoomData)
+        
+          // Add initial system message
+          await addDoc(collection(db, "planterChats", roomId, "messages"), {
+            senderId: "system",
+            senderName: "System",
+            content: "Chat dimulai. Silakan tanyakan hal yang ingin Anda ketahui tentang jasa planter ini.",
+            timestamp: serverTimestamp(),
+            type: 'system',
+            isRead: false
+          })
+        } else if (chatRoomSnap.exists()) {
+          setChatRoomData(chatRoomSnap.data())
         }
       } catch (error) {
-        console.error("Error fetching order:", error)
+        console.error("Error setting up chat:", error)
       } finally {
         setIsLoading(false)
       }
     }
     
-    fetchOrder()
-  }, [params.orderId])
+    setupChat()
+  }, [params.planterId, user])
 
   // Listen to messages real-time
   useEffect(() => {
-    if (!params.orderId) return
+    if (!chatRoomId) return
 
     const q = query(
-      collection(db, "planterOrders", params.orderId as string, "messages"),
+      collection(db, "planterChats", chatRoomId, "messages"),
       orderBy("timestamp", "asc")
     )
 
@@ -84,7 +165,7 @@ export default function ChatRoomPage() {
     })
 
     return () => unsubscribe()
-  }, [params.orderId])
+  }, [chatRoomId])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -92,12 +173,12 @@ export default function ChatRoomPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!messageInput.trim() || !user || !params.orderId) return
+    if (!messageInput.trim() || !user || !chatRoomId) return
 
     setIsSending(true)
     try {
       await addDoc(
-        collection(db, "planterOrders", params.orderId as string, "messages"), 
+        collection(db, "planterChats", chatRoomId, "messages"), 
         {
           senderId: user.uid,
           senderName: user.name,
@@ -107,6 +188,12 @@ export default function ChatRoomPage() {
           isRead: false
         }
       )
+      
+      // Update last message time in chat room
+      await setDoc(doc(db, "planterChats", chatRoomId), {
+        lastMessageAt: serverTimestamp()
+      }, { merge: true })
+
       setMessageInput("")
     } catch (error) {
       console.error("Error sending message:", error)
@@ -125,41 +212,13 @@ export default function ChatRoomPage() {
     const now = new Date()
     const diff = now.getTime() - date.getTime()
     
-    // If today, show time
     if (diff < 86400000) {
       return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
     }
-    // If this week, show day
     if (diff < 604800000) {
       return date.toLocaleDateString('id-ID', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
     }
-    // Otherwise show date
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-  }
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', { 
-      style: 'currency', 
-      currency: 'IDR', 
-      minimumFractionDigits: 0 
-    }).format(price)
-  }
-
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, { bg: string, text: string, label: string }> = {
-      pending: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Menunggu' },
-      confirmed: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Dikonfirmasi' },
-      processing: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Diproses' },
-      shipped: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Dikirim' },
-      delivered: { bg: 'bg-green-100', text: 'text-green-700', label: 'Selesai' },
-      cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Dibatalkan' },
-    }
-    const style = styles[status] || styles.pending
-    return (
-      <span className={`px-3 py-1 ${style.bg} ${style.text} rounded-full text-xs font-medium`}>
-        {style.label}
-      </span>
-    )
   }
 
   if (isLoading) {
@@ -174,13 +233,14 @@ export default function ChatRoomPage() {
     )
   }
 
-  if (!order) {
+  if (!planterInfo && !chatRoomId) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-slate-50 ">
         <Navbar />
         <div className="pt-32 text-center px-4">
-          <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Pesanan tidak ditemukan</h1>
+          <MessageCircle className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Planter tidak ditemukan</h1>
+          <p className="text-slate-500 mb-4">Data planter tidak tersedia atau sudah dihapus.</p>
           <Link href="/wirelessplant" className="text-emerald-600 hover:underline">
             Kembali ke beranda
           </Link>
@@ -189,15 +249,31 @@ export default function ChatRoomPage() {
     )
   }
 
-  const isPlanter = user?.uid === order.planterId
-  const otherPersonName = isPlanter ? order.buyerName : `Planter`
+  // Determine view logic
+  // If user is planter, show Buyer Name. If user is buyer, show Planter Name.
+  // Note: params.planterId is the ID of the PLANTER we are chatting with (or OUR ID if we are planter)
+  
+  // Checking if current user corresponds to the planter of this chat
+  // We use chatRoomData.planterId if avail, or params logic
+  const isPlanterView = user?.uid === (chatRoomData?.planterId || planterInfo?.userId || params.planterId)
+  
+  const displayName = isPlanterView 
+    ? (chatRoomData?.userName || "Buyer") 
+    : (planterInfo?.fullName || chatRoomData?.planterName || "Planter")
+    
+  // Only show location if viewing Planter profile (Buyer View)
+  const displayCity = !isPlanterView ? (planterInfo?.city || "") : ""
+  const displayProvince = !isPlanterView ? (planterInfo?.province || "") : ""
+  const displaySkills = !isPlanterView ? [...(planterInfo?.specialization || []), ...(planterInfo?.customPlants || [])] : []
+
+  const isPlanter = user?.uid === params.planterId
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
       <Navbar />
       
       <section className="pt-20 pb-0 h-screen flex flex-col">
-        <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col">
+        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -205,7 +281,7 @@ export default function ChatRoomPage() {
             className="bg-white rounded-t-3xl p-4 shadow-sm border border-slate-200 border-b-0 flex items-center justify-between"
           >
             <div className="flex items-center gap-4">
-              <Link href={isPlanter ? "/planter-dashboard" : "/wirelessplant"}>
+              <Link href="/wirelessplant">
                 <button className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -214,48 +290,67 @@ export default function ChatRoomPage() {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
                   <span className="text-lg font-bold text-emerald-700">
-                    {otherPersonName.charAt(0)}
+                    {displayName.charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900">{otherPersonName}</h3>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Sprout className="w-3 h-3" />
-                    <span>{order.productName}</span>
-                  </div>
+                  <h3 className="font-bold text-slate-900">{displayName}</h3>
+                  {(displayCity || displayProvince) && (
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <Sprout className="w-3 h-3" />
+                      <span>{displayCity}{displayCity && displayProvince ? ', ' : ''}{displayProvince}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {getStatusBadge(order.status)}
+              {/* Video Call Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => alert("Fitur video call akan segera hadir!")}
+                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:bg-slate-100"
+                style={{ color: themeColors.primary }}
+              >
+                <Video className="w-5 h-5" />
+              </motion.button>
+
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                Inquiry
+              </span>
             </div>
           </motion.div>
 
-          {/* Order Info Summary */}
+          {/* Planter Skills Info */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="bg-blue-50 border border-blue-100 border-t-0 p-4 flex items-center justify-between"
+            className="bg-emerald-50 border border-emerald-100 border-t-0 p-4"
           >
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-blue-600" />
-                <span className="text-blue-700">
-                  {order.quantity} item • {formatPrice(order.totalPrice)}
-                </span>
-              </div>
-              <div className="w-px h-4 bg-blue-200" />
-              <span className="text-blue-600">ID: {order.orderId}</span>
-            </div>
+            {displaySkills.length > 0 && (
+              <>
+                <p className="text-xs font-semibold text-emerald-700 mb-2">SPESIALISASI:</p>
+                <div className="flex flex-wrap gap-2">
+                  {displaySkills.slice(0, 5).map((skill, i) => (
+                    <span key={i} className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+            {displaySkills.length === 0 && (
+              <p className="text-xs text-emerald-600">Chat dengan planter untuk konsultasi jasa tanam.</p>
+            )}
           </motion.div>
 
           {/* Messages Container */}
           <div 
-            ref={chatContainerRef}
             className="flex-1 bg-white overflow-y-auto p-6 space-y-4"
-            style={{ maxHeight: 'calc(100vh - 320px)' }}
+            style={{ maxHeight: 'calc(100vh - 340px)' }}
           >
             <AnimatePresence>
               {messages.map((message, index) => {
@@ -326,7 +421,7 @@ export default function ChatRoomPage() {
               type="text"
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
-              placeholder="Ketik pesan..."
+              placeholder="Tanyakan seputar jasa planter..."
               className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 transition-all"
               disabled={isSending}
             />

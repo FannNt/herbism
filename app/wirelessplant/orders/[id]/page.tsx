@@ -1,446 +1,300 @@
 "use client"
 import { motion } from "framer-motion"
 import { useTheme } from "../../../context/ThemeContext"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { useAuth } from "../../../context/AuthContext"
 import { 
-  ArrowLeft, MapPin, Calendar, Sprout, User, Phone, Mail, 
-  MessageCircle, Camera, TrendingUp, Droplet, Sun, ThermometerSun,
-  CheckCircle, Package, Truck, Home, Video
+  ArrowLeft, Package, MapPin, User, Phone, Mail, 
+  Calendar, DollarSign, ShoppingCart, CheckCircle, Loader2, MessageCircle
 } from "lucide-react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
 import Navbar from "../../../components/Navbar"
+import { db } from "@/lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
+import type { PlanterProduct } from "@/services/planterService"
 
-interface OrderDetail {
-  id: string
-  orderId: string
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
-  orderDate: string
-  startDate?: string
-  estimatedHarvest?: string
-  actualHarvest?: string
-  
-  // Plant Info
-  plantType: string
-  quantity: number
-  duration: number
-  
-  // Planter Info
-  planterName: string
-  planterPhone: string
-  planterEmail: string
-  planterLocation: string
-  planterRegion: string
-  
-  // Financial
-  pricePerPlant: number
-  totalPrice: number
-  profitShare: number
-  estimatedProfit: number
-  
-  // Progress
-  progress: number
-  currentPhase: string
-  
-  // Updates
-  updates: Array<{
-    id: string
-    date: string
-    title: string
-    description: string
-    images?: string[]
-    metrics?: {
-      height?: number
-      health?: number
-      moisture?: number
-      temperature?: number
-    }
-  }>
-}
-
-const MOCK_ORDER: OrderDetail = {
-  id: "1",
-  orderId: "WP1733587200001",
-  status: 'in_progress',
-  orderDate: "2024-11-01",
-  startDate: "2024-11-05",
-  estimatedHarvest: "2025-05-05",
-  
-  plantType: "Jahe Merah",
-  quantity: 50,
-  duration: 6,
-  
-  planterName: "Budi Santoso",
-  planterPhone: "+62 812-3456-7890",
-  planterEmail: "budi.santoso@email.com",
-  planterLocation: "Bandung",
-  planterRegion: "Jawa Barat",
-  
-  pricePerPlant: 15000,
-  totalPrice: 755000,
-  profitShare: 25,
-  estimatedProfit: 188750,
-  
-  progress: 45,
-  currentPhase: "Fase Pertumbuhan",
-  
-  updates: [
-    {
-      id: "1",
-      date: "2024-12-05",
-      title: "Update Mingguan - Minggu ke-4",
-      description: "Tanaman jahe merah tumbuh dengan baik. Tinggi rata-rata sudah mencapai 25cm. Kondisi daun sehat dan tidak ada tanda-tanda hama.",
-      images: ["/api/placeholder/400/300", "/api/placeholder/400/300"],
-      metrics: {
-        height: 25,
-        health: 95,
-        moisture: 75,
-        temperature: 28
-      }
-    },
-    {
-      id: "2",
-      date: "2024-11-28",
-      title: "Update Mingguan - Minggu ke-3",
-      description: "Pertumbuhan konsisten. Dilakukan pemupukan organik dan penyiraman rutin. Semua tanaman dalam kondisi prima.",
-      images: ["/api/placeholder/400/300"],
-      metrics: {
-        height: 18,
-        health: 92,
-        moisture: 70,
-        temperature: 27
-      }
-    },
-    {
-      id: "3",
-      date: "2024-11-21",
-      title: "Update Mingguan - Minggu ke-2",
-      description: "Tunas mulai muncul dengan baik. Sistem irigasi berfungsi optimal. Cuaca mendukung pertumbuhan.",
-      images: ["/api/placeholder/400/300"],
-      metrics: {
-        height: 12,
-        health: 90,
-        moisture: 68,
-        temperature: 26
-      }
-    },
-    {
-      id: "4",
-      date: "2024-11-05",
-      title: "Penanaman Dimulai",
-      description: "Proses penanaman 50 bibit jahe merah telah selesai dilakukan. Lahan sudah disiapkan dengan pupuk organik dan sistem irigasi terpasang.",
-      images: ["/api/placeholder/400/300", "/api/placeholder/400/300"],
-      metrics: {
-        height: 0,
-        health: 100,
-        moisture: 80,
-        temperature: 25
-      }
-    }
-  ]
-}
-
-const TIMELINE_STEPS = [
-  { icon: Package, label: 'Order Dibuat', key: 'ordered' },
-  { icon: CheckCircle, label: 'Pembayaran', key: 'paid' },
-  { icon: Sprout, label: 'Penanaman', key: 'planted' },
-  { icon: TrendingUp, label: 'Pertumbuhan', key: 'growing' },
-  { icon: Home, label: 'Panen', key: 'harvested' },
-  { icon: Truck, label: 'Distribusi', key: 'distributed' }
-]
-
-export default function OrderDetailPage() {
+export default function CheckoutPage() {
+  const router = useRouter()
+  const params = useParams()
+  const { user } = useAuth()
   const { getThemeColors } = useTheme()
   const themeColors = getThemeColors()
-  const params = useParams()
-  const [activeTab, setActiveTab] = useState<'updates' | 'info'>('updates')
   
-  const order = MOCK_ORDER
+  const [product, setProduct] = useState<PlanterProduct | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
-  const getCurrentStep = () => {
-    if (order.status === 'completed') return 5
-    if (order.status === 'in_progress') return 3
-    if (order.status === 'pending') return 1
-    return 0
+  const [orderData, setOrderData] = useState({
+    quantity: 1,
+    notes: "",
+    buyerPhone: user?.uid || "",
+    buyerAddress: ""
+  })
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!params.id) return
+      
+      try {
+        const docRef = doc(db, "planterProducts", params.id as string)
+        const docSnap = await getDoc(docRef)
+        
+        if (docSnap.exists()) {
+          setProduct({ id: docSnap.id, ...docSnap.data() } as PlanterProduct)
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchProduct()
+  }, [params.id])
+
+  const calculateTotal = () => {
+    if (!product) return 0
+    return product.pricePerUnit * orderData.quantity
   }
-  
-  const currentStep = getCurrentStep()
+
+  const handleSubmitOrder = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!product || !user) return
+
+    setIsSubmitting(true)
+    
+    // Simulate payment processing
+    setTimeout(() => {
+      setIsSubmitting(false)
+      alert("Pembayaran Berhasil! Pesanan Anda telah dikirim ke planter.")
+      
+      // Redirect to chat with planter
+      router.push(`/wirelessplant/chat-planter/${product.planterId}`)
+    }, 2000)
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID', { 
+      style: 'currency', 
+      currency: 'IDR', 
+      minimumFractionDigits: 0 
+    }).format(price)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Navbar />
+        <div className="text-center pt-32">
+          <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-emerald-500" />
+          <p className="text-slate-500">Memuat data jasa...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+        <div className="pt-32 text-center px-4">
+          <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Jasa tidak ditemukan</h1>
+          <Link href="/wirelessplant" className="text-emerald-600 hover:underline">
+            Kembali ke daftar jasa
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 text-slate-900">
       <Navbar />
       
-      <section className="pt-32 pb-16 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
+      <section className="pt-28 pb-16 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
           {/* Back Button */}
-          <Link href="/wirelessplant/orders">
+          <Link href="/wirelessplant">
             <motion.button
               whileHover={{ x: -4 }}
-              className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-8"
+              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>Kembali ke Daftar Order</span>
+              <span>Kembali</span>
             </motion.button>
           </Link>
 
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-3xl p-8 shadow-lg mb-8"
-          >
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-4xl font-bold text-slate-900 mb-2">Order #{order.orderId}</h1>
-                <p className="text-slate-600">
-                  Dipesan pada {new Date(order.orderDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </p>
-              </div>
-              <div className="mt-4 md:mt-0">
-                <div className="text-sm text-slate-500 mb-1">Total Investasi</div>
-                <div className="text-3xl font-bold" style={{ color: themeColors.primary }}>
-                  Rp {order.totalPrice.toLocaleString('id-ID')}
-                </div>
-                <div className="text-sm text-green-600 mt-1">
-                  Est. Profit: Rp {order.estimatedProfit.toLocaleString('id-ID')} ({order.profitShare}%)
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Timeline */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-3xl p-8 shadow-lg mb-8"
-          >
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Progress Timeline</h2>
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                {TIMELINE_STEPS.map((step, index) => {
-                  const StepIcon = step.icon
-                  const isCompleted = index <= currentStep
-                  const isCurrent = index === currentStep
-                  
-                  return (
-                    <div key={step.key} className="flex flex-col items-center flex-1 relative">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
-                          isCompleted ? 'text-white' : 'bg-slate-200 text-slate-400'
-                        }`}
-                        style={isCompleted ? { backgroundColor: themeColors.primary } : {}}
-                      >
-                        <StepIcon className="w-6 h-6" />
-                      </motion.div>
-                      <div className={`text-xs md:text-sm text-center ${isCurrent ? 'font-semibold' : ''}`} style={isCurrent ? { color: themeColors.primary } : {}}>
-                        {step.label}
-                      </div>
-                      
-                      {index < TIMELINE_STEPS.length - 1 && (
-                        <div className="absolute top-6 left-1/2 w-full h-1 bg-slate-200" style={{ zIndex: -1 }}>
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: isCompleted ? '100%' : '0%' }}
-                            transition={{ delay: index * 0.1 + 0.2 }}
-                            className="h-full"
-                            style={{ backgroundColor: themeColors.primary }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </motion.div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* Tabs */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Order Form */}
+            <div className="lg:col-span-2">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-3xl p-2 shadow-lg"
+                className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200"
               >
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setActiveTab('info')}
-                    className={`flex-1 py-3 rounded-xl font-medium transition-all ${
-                      activeTab === 'info' ? 'text-white shadow-lg' : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                    style={activeTab === 'info' ? { background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})` } : {}}
-                  >
-                    Info Detail
-                  </button>
-                </div>
-              </motion.div>
-              {/* Info Tab */}
-              {activeTab === 'info' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="bg-white rounded-3xl p-8 shadow-lg"
-                >
-                  <h3 className="text-2xl font-bold text-slate-900 mb-6">Detail Pesanan</h3>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="font-semibold text-slate-900 mb-3">Informasi Tanaman</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-600">Jenis Tanaman</span>
-                          <span className="font-medium text-slate-900">{order.plantType}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-600">Jumlah</span>
-                          <span className="font-medium text-slate-900">{order.quantity} tanaman</span>
-                        </div>
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-600">Durasi</span>
-                          <span className="font-medium text-slate-900">{order.duration} bulan</span>
-                        </div>
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-600">Fase Saat Ini</span>
-                          <span className="font-medium text-slate-900">{order.currentPhase}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold text-slate-900 mb-3">Informasi Keuangan</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-600">Harga per Tanaman</span>
-                          <span className="font-medium text-slate-900">Rp {order.pricePerPlant.toLocaleString('id-ID')}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-600">Total Investasi</span>
-                          <span className="font-medium text-slate-900">Rp {order.totalPrice.toLocaleString('id-ID')}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-600">Bagi Hasil</span>
-                          <span className="font-medium text-slate-900">{order.profitShare}%</span>
-                        </div>
-                        <div className="flex items-center justify-between py-2">
-                          <span className="text-slate-600">Estimasi Profit</span>
-                          <span className="font-medium text-green-600">Rp {order.estimatedProfit.toLocaleString('id-ID')}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold text-slate-900 mb-3">Timeline</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-600">Tanggal Order</span>
-                          <span className="font-medium text-slate-900">{new Date(order.orderDate).toLocaleDateString('id-ID')}</span>
-                        </div>
-                        {order.startDate && (
-                          <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                            <span className="text-slate-600">Mulai Tanam</span>
-                            <span className="font-medium text-slate-900">{new Date(order.startDate).toLocaleDateString('id-ID')}</span>
-                          </div>
-                        )}
-                        {order.estimatedHarvest && (
-                          <div className="flex items-center justify-between py-2">
-                            <span className="text-slate-600">Estimasi Panen</span>
-                            <span className="font-medium text-slate-900">{new Date(order.estimatedHarvest).toLocaleDateString('id-ID')}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Sidebar */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Progress Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-3xl p-6 shadow-lg sticky top-24"
-              >
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Progress Keseluruhan</h3>
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">Detail Pemesanan</h2>
                 
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-slate-600">Kemajuan</span>
-                    <span className="text-2xl font-bold text-slate-900">{order.progress}%</span>
+                <form onSubmit={handleSubmitOrder} className="space-y-6">
+                  {/* Quantity */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Jumlah Pesanan *
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setOrderData(prev => ({ 
+                          ...prev, 
+                          quantity: Math.max(1, prev.quantity - 1) 
+                        }))}
+                        className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        value={orderData.quantity}
+                        onChange={(e) => setOrderData(prev => ({ 
+                          ...prev, 
+                          quantity: Math.max(1, parseInt(e.target.value) || 1) 
+                        }))}
+                        min="1"
+                        max={product.stock}
+                        className="w-24 text-center px-4 py-2 rounded-xl border border-slate-200 font-bold text-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setOrderData(prev => ({ 
+                          ...prev, 
+                          quantity: Math.min(product.stock, prev.quantity + 1) 
+                        }))}
+                        className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold"
+                      >
+                        +
+                      </button>
+                      <span className="text-sm text-slate-500">
+                        Tersedia: {product.stock} {product.unit}
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${order.progress}%` }}
-                      transition={{ duration: 1, delay: 0.5 }}
-                      className="h-full rounded-full"
-                      style={{ background: `linear-gradient(90deg, ${themeColors.primary}, ${themeColors.secondary})` }}
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Nomor Telepon *
+                    </label>
+                    <input
+                      type="tel"
+                      value={orderData.buyerPhone}
+                      onChange={(e) => setOrderData(prev => ({ ...prev, buyerPhone: e.target.value }))}
+                      required
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2"
+                      placeholder="08123456789"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <Sprout className="w-5 h-5" style={{ color: themeColors.primary }} />
-                    <div>
-                      <div className="text-sm text-slate-500">Fase Saat Ini</div>
-                      <div className="font-semibold text-slate-900">{order.currentPhase}</div>
+                  {/* Address */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Alamat Lengkap *
+                    </label>
+                    <textarea
+                      value={orderData.buyerAddress}
+                      onChange={(e) => setOrderData(prev => ({ ...prev, buyerAddress: e.target.value }))}
+                      required
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2"
+                      placeholder="Masukkan alamat lengkap Anda"
+                    />
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Catatan (Opsional)
+                    </label>
+                    <textarea
+                      value={orderData.notes}
+                      onChange={(e) => setOrderData(prev => ({ ...prev, notes: e.target.value }))}
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2"
+                      placeholder="Tambahkan catatan atau permintaan khusus..."
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !user}
+                    className="w-full py-4 rounded-xl text-white font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ backgroundColor: themeColors.primary }}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Memproses...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        Pesan Sekarang
+                      </>
+                    )}
+                  </button>
+                </form>
+              </motion.div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="lg:col-span-1">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 sticky top-24"
+              >
+                <h3 className="text-lg font-bold text-slate-900 mb-4">Ringkasan Pesanan</h3>
+                
+                {/* Product Info */}
+                <div className="mb-6 pb-6 border-b border-slate-100">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <Package className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-slate-900">{product.plantName}</h4>
+                      <p className="text-sm text-slate-500">{product.category}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5" style={{ color: themeColors.primary }} />
-                    <div>
-                      <div className="text-sm text-slate-500">Estimasi Panen</div>
-                      <div className="font-semibold text-slate-900">
-                        {order.estimatedHarvest && new Date(order.estimatedHarvest).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </div>
-                    </div>
+                  
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <User className="w-4 h-4" />
+                    <span>{product.planterName}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
+                    <MapPin className="w-4 h-4" />
+                    <span>{product.planterLocation}</span>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-200 pt-4 mb-6">
-                  <h4 className="font-semibold text-slate-900 mb-3">Informasi Planter</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <User className="w-5 h-5 text-slate-400" />
-                      <span className="text-slate-700">{order.planterName}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <MapPin className="w-5 h-5 text-slate-400" />
-                      <span className="text-slate-700">{order.planterLocation}, {order.planterRegion}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-5 h-5 text-slate-400" />
-                      <span className="text-slate-700">{order.planterPhone}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 text-slate-400" />
-                      <span className="text-slate-700 text-sm">{order.planterEmail}</span>
-                    </div>
+                {/* Price Breakdown */}
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Harga per {product.unit}</span>
+                    <span className="font-medium">{formatPrice(product.pricePerUnit)}</span>
                   </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Link href={`/wirelessplant/chat/${order.id}`}>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full py-3 rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
-                      style={{ background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})` }}
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      <span>Buka Chat Room</span>
-                    </motion.button>
-                  </Link>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Jumlah</span>
+                    <span className="font-medium">{orderData.quantity} {product.unit}</span>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span style={{ color: themeColors.primary }}>
+                      {formatPrice(calculateTotal())}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             </div>

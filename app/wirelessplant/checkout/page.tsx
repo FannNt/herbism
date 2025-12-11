@@ -1,11 +1,14 @@
 "use client"
 import { motion } from "framer-motion"
 import { useTheme } from "../../context/ThemeContext"
+import { useAuth } from "../../context/AuthContext"
 import { useState, useEffect, Suspense } from "react"
 import { CreditCard, Wallet, Building2, CheckCircle, ArrowLeft, Shield, Clock } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import Navbar from "../../components/Navbar"
+import { db } from "@/lib/firebase"
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore"
 
 interface PaymentMethod {
   id: string
@@ -40,11 +43,13 @@ function CheckoutContent() {
   const themeColors = getThemeColors()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user } = useAuth()
   
   const [selectedPayment, setSelectedPayment] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [orderId, setOrderId] = useState("")
+  const [planterName, setPlanterName] = useState("")
 
   // Get order details from URL params
   const planterId = searchParams.get('planterId')
@@ -56,26 +61,75 @@ function CheckoutContent() {
   const adminFee = 5000
   const grandTotal = totalPrice + adminFee
 
+  // Fetch planter info
+  useEffect(() => {
+    const fetchPlanterInfo = async () => {
+      if (!planterId) return
+      try {
+        const planterDoc = await getDoc(doc(db, "planterRegistrations", planterId))
+        if (planterDoc.exists()) {
+          setPlanterName(planterDoc.data().fullName || "Planter")
+        }
+      } catch (error) {
+        console.error("Error fetching planter:", error)
+      }
+    }
+    fetchPlanterInfo()
+  }, [planterId])
+
   const handlePayment = async () => {
     if (!selectedPayment) {
       alert("Pilih metode pembayaran terlebih dahulu")
       return
     }
 
+    if (!user) {
+      alert("Silakan login terlebih dahulu")
+      router.push("/login")
+      return
+    }
+
     setIsProcessing(true)
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
       const newOrderId = `WP${Date.now()}`
+      
+      // Save order to Firebase
+      await setDoc(doc(db, "userOrders", newOrderId), {
+        orderId: newOrderId,
+        userId: user.uid,
+        userName: user.name || user.username || "User",
+        planterId: planterId,
+        planterName: planterName,
+        planterLocation: "Indonesia", // You can fetch this from planter data
+        plantType: plant,
+        quantity: quantity,
+        duration: parseInt(duration),
+        pricePerPlant: pricePerPlant,
+        totalPrice: totalPrice,
+        adminFee: adminFee,
+        grandTotal: grandTotal,
+        paymentMethod: selectedPayment,
+        status: 'pending',
+        progress: 0,
+        orderDate: new Date().toISOString().split('T')[0],
+        createdAt: serverTimestamp(),
+        lastUpdate: new Date().toISOString().split('T')[0]
+      })
+
       setOrderId(newOrderId)
       setIsProcessing(false)
       setIsSuccess(true)
       
-      // Redirect to chat room after 3 seconds
+      // Redirect to orders page after 3 seconds
       setTimeout(() => {
-        router.push(`/wirelessplant/chat/${newOrderId}`)
+        router.push(`/wirelessplant/orders`)
       }, 3000)
-    }, 2000)
+    } catch (error) {
+      console.error("Error creating order:", error)
+      alert("Gagal membuat pesanan. Silakan coba lagi.")
+      setIsProcessing(false)
+    }
   }
 
   if (isSuccess) {
