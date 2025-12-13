@@ -3,6 +3,7 @@
 import { motion, Variants } from "framer-motion"
 import { useTheme } from "../context/ThemeContext"
 import Image from "next/image"
+import Link from "next/link"
 
 export default function PlantCareSection() {
   const { getThemeColors } = useTheme()
@@ -199,7 +200,9 @@ export default function PlantCareSection() {
                   whileTap={{ scale: 0.95 }}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-full font-medium shadow-lg hover:shadow-xl transition-all group/btn"
                 >
+                  <Link href="/dashboardplant">
                   <span>Cobain Sekarang</span>
+                  </Link>
                   <svg className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>

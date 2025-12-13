@@ -624,7 +624,11 @@ export default function CompleteProfilePage() {
                       key={condition}
                       type="button"
                       onClick={() => {
+                        const isExclusive = condition === "Tidak Ada";
+                        const hasExclusive = formData.healthCondition.includes("Tidak Ada");
+                        
                         if (formData.healthCondition.includes(condition)) {
+                          // Unselect: just remove the item
                           setFormData({
                             ...formData,
                             healthCondition: formData.healthCondition.filter(
@@ -632,13 +636,28 @@ export default function CompleteProfilePage() {
                             ),
                           });
                         } else {
-                          setFormData({
-                            ...formData,
-                            healthCondition: [
-                              ...formData.healthCondition,
-                              condition,
-                            ],
-                          });
+                          if (isExclusive) {
+                            // Selecting "Tidak Ada" - clear all others
+                            setFormData({
+                              ...formData,
+                              healthCondition: [condition],
+                            });
+                          } else if (hasExclusive) {
+                            // Selecting another option when "Tidak Ada" is selected - replace
+                            setFormData({
+                              ...formData,
+                              healthCondition: [condition],
+                            });
+                          } else {
+                            // Normal add
+                            setFormData({
+                              ...formData,
+                              healthCondition: [
+                                ...formData.healthCondition,
+                                condition,
+                              ],
+                            });
+                          }
                         }
                       }}
                       className={`px-4 py-3 rounded-2xl border-2 transition-all text-sm font-medium ${
@@ -922,7 +941,11 @@ export default function CompleteProfilePage() {
                         key={allergy}
                         type="button"
                         onClick={() => {
+                          const isExclusive = allergy === "Tidak Ada Alergi";
+                          const hasExclusive = formData.allergies.includes("Tidak Ada Alergi");
+                          
                           if (formData.allergies.includes(allergy)) {
+                            // Unselect: just remove the item
                             setFormData({
                               ...formData,
                               allergies: formData.allergies.filter(
@@ -930,10 +953,25 @@ export default function CompleteProfilePage() {
                               ),
                             });
                           } else {
-                            setFormData({
-                              ...formData,
-                              allergies: [...formData.allergies, allergy],
-                            });
+                            if (isExclusive) {
+                              // Selecting "Tidak Ada Alergi" - clear all others
+                              setFormData({
+                                ...formData,
+                                allergies: [allergy],
+                              });
+                            } else if (hasExclusive) {
+                              // Selecting another option when "Tidak Ada Alergi" is selected - replace
+                              setFormData({
+                                ...formData,
+                                allergies: [allergy],
+                              });
+                            } else {
+                              // Normal add
+                              setFormData({
+                                ...formData,
+                                allergies: [...formData.allergies, allergy],
+                              });
+                            }
                           }
                         }}
                         className={`px-4 py-3 rounded-2xl border-2 transition-all text-sm font-medium ${

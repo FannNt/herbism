@@ -49,7 +49,7 @@ import Link from "next/link"
           viewport={{ once: true }}
           className="max-w-7xl mx-auto w-full relative z-10"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-max">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max">
             <motion.div variants={itemVariants} className="col-span-1 md:col-span-2 lg:col-span-4">
               <div className="text-center md:col-span-12 bg-white/100 rounded-[2.5rem] p-8 md:p-10 shadow-lg text-white relative overflow-hidden">
                 <motion.div
@@ -68,21 +68,6 @@ import Link from "next/link"
                   Layanan tanam bersama dengan sistem bagi hasil yang menguntungkan dan transparan
                 </p>
               </div>
-            </motion.div>
-            <motion.div
-              variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              className="col-span-1 row-span-1 bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 group relative"
-            >
-              <img
-                src="/Wireless2.png"
-                alt="Wireless Plant System"
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{ background: `linear-gradient(to top, ${themeColors.secondary}40, transparent)` }}
-              />
             </motion.div>
             <motion.div
               variants={itemVariants}

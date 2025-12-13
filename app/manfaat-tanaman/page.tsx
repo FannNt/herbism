@@ -421,7 +421,7 @@ export default function ManfaatTanamanPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.7 }}
-                    className="md:col-span-12 flex justify-center"
+                    className="md:col-span-12 flex justify-center md:mb-0 mb-10"
                   >
                     <motion.button
                       whileHover={{ scale: 1.02 }}

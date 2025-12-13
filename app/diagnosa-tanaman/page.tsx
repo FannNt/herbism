@@ -12,6 +12,7 @@ export default function DiagnosaPage() {
   const themeColors = getThemeColors()
   
   const [image, setImage] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [diagnosis, setDiagnosis] = useState<any | null>(null)
 
@@ -20,37 +21,95 @@ export default function DiagnosaPage() {
     if (file) {
       const imageUrl = URL.createObjectURL(file)
       setImage(imageUrl)
+      setImageFile(file)
       setDiagnosis(null)
     }
   }
 
-  const handleAnalyze = () => {
-    if (!image) return
+  /* Helper to compress image before sending */
+  const compressImage = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new window.Image(); // Use window.Image to avoid conflict with next/image
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          
+          // Limit max dimension to 1024px to reduce size
+          const MAX_SIZE = 1024; 
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Compress to JPEG with 0.7 quality
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          resolve(compressedBase64);
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
+  const handleAnalyze = async () => {
+    if (!imageFile) return
 
     setIsAnalyzing(true)
-    // Simulasi jawaban ai
-    setTimeout(() => {
-      setIsAnalyzing(false)
-      setDiagnosis({
-        name: "Busuk Daun (Leaf Blight)",
-        severity: "Sedang",
-        description: "Penyakit jamur yang menyebabkan bercak coklat pada daun, sering terjadi pada kondisi lembab berlebih.",
-        solutions: [
-          "Pangkas daun yang terinfeksi segera.",
-          "Kurangi penyiraman, biarkan tanah agak kering.",
-          "Hindari menyiram air langsung ke daun.",
-          "Gunakan fungisida alami jika menyebar."
-        ],
-        care: {
-          water: "Siram di pagi hari, 2-3 hari sekali.",
-          sun: "Pastikan sirkulasi udara baik dan terkena sinar matahari pagi."
-        }
+    try {
+      // 1. Compress image to avoid 400/413 errors
+      const base64Image = await compressImage(imageFile);
+        
+      // 2. Call local API route
+      const response = await fetch("/api/scan-penyakit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image: base64Image }),
       })
-    }, 2500)
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal menganalisis gambar. Coba gunakan gambar yang lebih kecil.")
+      }
+
+      if (data.result) {
+        setDiagnosis(data.result)
+      } else {
+        throw new Error("Format respons tidak valid")
+      }
+
+    } catch (error: any) {
+      console.error("API call error:", error)
+      alert(`Gagal: ${error.message || "Terjadi kesalahan sistem"}`)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const clearImage = () => {
     setImage(null)
+    setImageFile(null)
     setDiagnosis(null)
   }
 

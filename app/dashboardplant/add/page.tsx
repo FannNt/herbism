@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
-import { ChevronLeft, Upload, X, Sprout, Image as ImageIcon, Sun, Calendar, Sparkles, Bot, CheckCircle2, AlertCircle } from "lucide-react"
+import { ChevronLeft, Upload, X, Sprout, Image as ImageIcon, Sun, Calendar, Sparkles, Bot, CheckCircle2, AlertCircle, Leaf } from "lucide-react"
 import { validateAndGeneratePlantData } from "@/services/geminiService"
-import { createPlant } from "@/services/plantService"
+import { createPlant, getUserPlants, Plant } from "@/services/plantService"
 import { auth } from "@/lib/firebase"
 
 const soilTypes = [
@@ -39,6 +39,42 @@ export default function AddPlantPage() {
     })
 
     const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [existingPlants, setExistingPlants] = useState<Plant[]>([])
+
+    // Parse markdown-like text (remove * and make bold)
+    const parseMarkdownText = (text: string): React.ReactNode => {
+        if (!text) return text
+        
+        // Split by **text** pattern for bold
+        const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+        
+        return parts.map((part, index) => {
+            // Check for **bold** pattern
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={index} className="font-semibold">{part.slice(2, -2)}</strong>
+            }
+            // Check for *italic* or just * pattern - remove asterisks
+            if (part.startsWith('*') && part.endsWith('*')) {
+                return <span key={index}>{part.slice(1, -1)}</span>
+            }
+            // Remove standalone asterisks
+            return part.replace(/\*/g, '')
+        })
+    }
+
+    // Fetch existing plants
+    useEffect(() => {
+        const fetchExistingPlants = async () => {
+            if (!user?.uid) return
+            try {
+                const plants = await getUserPlants(user.uid)
+                setExistingPlants(plants.slice(0, 3)) // Only take first 3
+            } catch (err) {
+                console.error("Error fetching plants:", err)
+            }
+        }
+        fetchExistingPlants()
+    }, [user])
 
     const handleGenerateSchedule = async () => {
         if (!formData.type.trim()) {
@@ -169,7 +205,6 @@ export default function AddPlantPage() {
 
             <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
                 <form onSubmit={handleSubmit} className="space-y-6">
-
                     {/* Image*/}
                     <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -278,7 +313,7 @@ export default function AddPlantPage() {
                                         required
                                         value={formData.soil}
                                         onChange={(e) => setFormData({ ...formData, soil: e.target.value })}
-                                        placeholder="Contoh: Tanah belakang rumah dan campuran pupuk kompos"
+                                        placeholder="Contoh: Tanah pupuk kompos"
                                         className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400"
                                     />
                                     <Sun className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -339,64 +374,86 @@ export default function AddPlantPage() {
                             </div>
 
                             {formData.wateringSchedule ? (
-                                <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                        <div className="space-y-1.5">
-                                            <label className="text-sm font-medium text-slate-700">Jadwal Penyiraman</label>
+                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    {/* Schedule Cards */}
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {/* Watering Schedule Card */}
+                                        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5 border border-blue-100 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-full blur-2xl -mr-8 -mt-8" />
                                             <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    readOnly
-                                                    value={formData.wateringSchedule}
-                                                    className="w-full px-4 py-3 rounded-xl border border-purple-200 bg-purple-50/50 text-slate-700 focus:outline-none"
-                                                />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                    <Sparkles className="w-4 h-4 text-purple-400" />
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+                                                        <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                                        </svg>
+                                                    </div>
+                                                    <h4 className="font-semibold text-blue-900">Jadwal Penyiraman</h4>
                                                 </div>
+                                                <p className="text-sm text-blue-800 leading-relaxed">{parseMarkdownText(formData.wateringSchedule)}</p>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-1.5">
-                                            <label className="text-sm font-medium text-slate-700">Jadwal Pemupukan</label>
+                                        {/* Fertilizing Schedule Card */}
+                                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border border-amber-100 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100/50 rounded-full blur-2xl -mr-8 -mt-8" />
                                             <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    readOnly
-                                                    value={formData.fertilizeSchedule}
-                                                    className="w-full px-4 py-3 rounded-xl border border-purple-200 bg-purple-50/50 text-slate-700 focus:outline-none"
-                                                />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                    <Sparkles className="w-4 h-4 text-purple-400" />
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center">
+                                                        <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                        </svg>
+                                                    </div>
+                                                    <h4 className="font-semibold text-amber-900">Jadwal Pemupukan</h4>
                                                 </div>
+                                                <p className="text-sm text-amber-800 leading-relaxed">{parseMarkdownText(formData.fertilizeSchedule)}</p>
                                             </div>
                                         </div>
+
+                                        {/* Special Care Card */}
+                                        {formData.specialCare.length > 0 && (
+                                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 border border-purple-100 relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-100/50 rounded-full blur-2xl -mr-8 -mt-8" />
+                                                <div className="relative">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center">
+                                                            <Sparkles className="w-4 h-4 text-purple-600" />
+                                                        </div>
+                                                        <h4 className="font-semibold text-purple-900">Perawatan Khusus</h4>
+                                                    </div>
+                                                    <ul className="space-y-2.5">
+                                                        {formData.specialCare.map((care, index) => (
+                                                            <li key={index} className="flex items-start gap-3 text-sm text-purple-800">
+                                                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center text-xs font-medium text-purple-600 mt-0.5">
+                                                                    {index + 1}
+                                                                </span>
+                                                                <span className="leading-relaxed">{parseMarkdownText(care)}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {formData.specialCare.length > 0 && (
-                                        <div className="space-y-1.5">
-                                            <label className="text-sm font-medium text-slate-700">Perawatan Khusus</label>
-                                            <div className="bg-purple-50/50 border border-purple-200 rounded-xl p-4">
-                                                <ul className="space-y-2">
-                                                    {formData.specialCare.map((care, index) => (
-                                                        <li key={index} className="flex items-start gap-2 text-sm text-slate-700">
-                                                            <span className="text-purple-500 mt-0.5">•</span>
-                                                            <span>{care}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="flex justify-end">
+                                    {/* Regenerate Button */}
+                                    <div className="flex justify-center pt-2">
                                         <button
                                             type="button"
                                             onClick={handleGenerateSchedule}
                                             disabled={isGenerating}
-                                            className="text-xs text-slate-500 hover:text-purple-600 transition-colors flex items-center gap-1"
+                                            className="text-xs font-medium text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-4 py-2 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
                                         >
-                                            <Sparkles className="w-3 h-3" />
-                                            Regenerate Jadwal
+                                            {isGenerating ? (
+                                                <>
+                                                    <div className="w-3 h-3 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                                                    Regenerating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles className="w-3.5 h-3.5" />
+                                                    Regenerate Jadwal
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </div>
