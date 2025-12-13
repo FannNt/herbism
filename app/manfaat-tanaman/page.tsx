@@ -162,7 +162,7 @@ export default function ManfaatTanamanPage() {
             <div className="relative z-10 w-48 h-48 md:w-56 md:h-56 mb-4 mt-4">
               <div className="absolute inset-0 rounded-full blur-3xl opacity-30 animate-pulse" style={{ backgroundColor: `${themeColors.primary}30` }} />
               <Image
-                src="/Erbis.jpg"
+                src="/Erbis.png"
                 alt="Erbis Mascot"
                 fill
                 className="object-cover rounded-full border-4 border-white shadow-lg"

@@ -207,7 +207,7 @@ export default function ConsultationPage() {
                 {/* Mobile Header with Mascot Thumb */}
                 <div className="lg:hidden p-4 border-b border-slate-100 bg-white flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 relative">
-                        <Image src="/Erbis.jpg" alt="Erbis" fill className="object-cover" />
+                        <Image src="/Erbis.png" alt="Erbis" fill className="object-cover" />
                     </div>
                     <div>
                         <h3 className="font-bold text-slate-900">Erbis AI</h3>
@@ -238,7 +238,7 @@ export default function ConsultationPage() {
                             >
                                 {msg.role === "assistant" ? (
                                     <div className="relative w-full h-full">
-                                        <Image src="/Erbis.jpg" alt="Bot" fill className="object-cover rounded-xl" />
+                                        <Image src="/Erbis.png" alt="Bot" fill className="object-cover rounded-xl" />
                                     </div>
                                 ) : (
                                     <User size={20} />
@@ -360,7 +360,7 @@ export default function ConsultationPage() {
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4">
                             <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden p-1 flex-shrink-0">
                                 <div className="relative w-full h-full">
-                                    <Image src="/Erbis.jpg" alt="Bot" fill className="object-cover rounded-xl" />
+                                    <Image src="/Erbis.png" alt="Bot" fill className="object-cover rounded-xl" />
                                 </div>
                             </div>
                             <div className="bg-slate-50 border border-slate-100 p-4 rounded-3xl rounded-tl-sm flex items-center gap-3 shadow-sm">

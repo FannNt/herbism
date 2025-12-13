@@ -142,7 +142,7 @@ export default function DiagnosaPage() {
             <div className="relative z-10 w-48 h-48 md:w-56 md:h-56 mb-4 mt-4">
               <div className="absolute inset-0 bg-emerald-100 rounded-full blur-3xl opacity-30 animate-pulse" />
               <Image
-                src="/Erbis.jpg"
+                src="/Erbis.png"
                 alt="Erbis Mascot"
                 fill
                 className="object-cover rounded-full border-4 border-white shadow-lg"
