@@ -11,6 +11,7 @@ import {
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import Navbar from "../../../components/Navbar"
+import AuthGuard from "../../../components/AuthGuard"
 import { db } from "@/lib/firebase"
 import { 
   doc, getDoc, collection, addDoc, query, orderBy, 
@@ -193,8 +194,9 @@ export default function ChatRoomPage() {
   const otherPersonName = isPlanter ? order.buyerName : `Planter`
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      <Navbar />
+    <AuthGuard message="Silakan login untuk mengakses chat pesanan">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        <Navbar />
       
       <section className="pt-20 pb-0 h-screen flex flex-col">
         <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col">
@@ -345,6 +347,7 @@ export default function ChatRoomPage() {
           </motion.form>
         </div>
       </section>
-    </div>
+      </div>
+    </AuthGuard>
   )
 }

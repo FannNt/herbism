@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                model: "llama-3.2-90b-vision-preview",
+                model: "meta-llama/llama-4-maverick-17b-128e-instruct",
                 messages: [
                     {
                         role: "system",
@@ -108,8 +108,20 @@ export async function POST(req: NextRequest) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error("GROQ API Error:", errorText);
+
+            let errorMessage = `GROQ API Error: ${response.status} ${response.statusText}`;
+            try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.error && errorJson.error.message) {
+                    errorMessage = errorJson.error.message;
+                }
+            } catch (e) {
+                // ignore parse error uses raw text
+                errorMessage += ` - ${errorText.substring(0, 100)}`;
+            }
+
             return NextResponse.json(
-                { error: `GROQ API Error: ${response.status} ${response.statusText}` },
+                { error: errorMessage },
                 { status: response.status }
             );
         }

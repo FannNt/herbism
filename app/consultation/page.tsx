@@ -18,6 +18,8 @@ import {
   Check
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import AuthGuard from "../components/AuthGuard";
+import Navbar from "../components/Navbar";
 
 // Frontend-only types
 type Message = {
@@ -37,6 +39,7 @@ type Message = {
 export default function ConsultationPage() {
   const router = useRouter();
   const { getThemeColors } = useTheme();
+  const themeColors = getThemeColors();
   
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -138,29 +141,12 @@ export default function ConsultationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Top Header */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex items-center">
-            <div className="flex items-center gap-4">
-                <button
-                  onClick={() => router.push("/profile")}
-                  className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 rounded-xl transition-colors border border-transparent hover:border-slate-200"
-                >
-                  <ChevronLeft className="w-6 h-6 text-slate-600" />
-                </button>
-                <div>
-                   <h1 className="text-xl font-bold text-slate-900">Konsultasi Kesehatan</h1>
-                   <p className="text-xs sm:text-sm text-slate-500">Beri tahu kami tentang keluhanmu</p>
-                </div>
-            </div>
-        </div>
-      </div>
-
-      <div className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center">
+    <AuthGuard message="Silakan login untuk mengakses konsultasi kesehatan herbal">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        {/* Navbar */}
+        <Navbar />
+        <div className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center pb-24 md:pb-8">
         <div className="w-full max-w-7xl h-[80vh] lg:h-[85vh] grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* Left Panel - Mascot & Info (Bento Style) */}
             <div className="hidden lg:flex lg:col-span-4 flex-col gap-6">
                 {/* Mascot Card */}
                 <motion.div 
@@ -168,12 +154,12 @@ export default function ConsultationPage() {
                     animate={{ opacity: 1, x: 0 }}
                     className="flex-1 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden relative group p-8 flex flex-col items-center justify-center text-center"
                 >
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-emerald-50/50 to-transparent pointer-events-none" />
+                    <div className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ background: `linear-gradient(to bottom, ${themeColors.primary}10, transparent)` }} />
                     
                     <div className="relative w-64 h-64 mb-6 transition-transform duration-500 group-hover:scale-105">
-                        <div className="absolute inset-0 bg-emerald-200/20 rounded-full blur-3xl animate-pulse" />
+                        <div className="absolute inset-0 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: `${themeColors.primary}15` }} />
                         <Image 
-                            src="/Erbis.jpg" 
+                            src="/Erbis.png" 
                             alt="Erbis Mascot" 
                             fill
                             className="object-contain drop-shadow-2xl"
@@ -191,7 +177,18 @@ export default function ConsultationPage() {
                             <button
                                 key={tag}
                                 onClick={() => setInput(`Saya merasa ${tag.toLowerCase()}`)}
-                                className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium hover:bg-emerald-100 transition-colors border border-emerald-100"
+                                className="px-4 py-2 rounded-full text-sm font-medium transition-colors border"
+                                style={{
+                                    backgroundColor: `${themeColors.primary}10`,
+                                    color: themeColors.primary,
+                                    borderColor: `${themeColors.primary}20`
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = `${themeColors.primary}20`
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = `${themeColors.primary}10`
+                                }}
                             >
                                 {tag}
                             </button>
@@ -228,11 +225,17 @@ export default function ConsultationPage() {
                             className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                         >
                             {/* Avatar */}
-                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
-                                msg.role === "assistant" 
-                                ? "bg-slate-50 border border-slate-100 overflow-hidden p-1" 
-                                : "bg-emerald-100 text-emerald-600"
-                            }`}>
+                            <div 
+                                className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+                                    msg.role === "assistant" 
+                                    ? "bg-slate-50 border border-slate-100 overflow-hidden p-1" 
+                                    : ""
+                                }`}
+                                style={msg.role === "user" ? {
+                                    backgroundColor: `${themeColors.primary}15`,
+                                    color: themeColors.primary
+                                } : {}}
+                            >
                                 {msg.role === "assistant" ? (
                                     <div className="relative w-full h-full">
                                         <Image src="/Erbis.jpg" alt="Bot" fill className="object-cover rounded-xl" />
@@ -247,9 +250,12 @@ export default function ConsultationPage() {
                                 <div 
                                 className={`p-5 rounded-3xl shadow-sm text-sm sm:text-base leading-relaxed ${
                                     msg.role === "user"
-                                    ? "bg-emerald-600 text-white rounded-tr-sm"
+                                    ? "text-white rounded-tr-sm"
                                     : "bg-slate-50 text-slate-800 border border-slate-100 rounded-tl-sm"
                                 }`}
+                                style={msg.role === "user" ? {
+                                    backgroundColor: themeColors.primary
+                                } : {}}
                                 >
                                     <p className="whitespace-pre-line">{msg.content}</p>
                                 </div>
@@ -312,9 +318,15 @@ export default function ConsultationPage() {
                                             disabled={savedRecipeIds.has(msg.id) || savingRecipeId === msg.id}
                                             className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
                                                 savedRecipeIds.has(msg.id)
-                                                    ? "bg-emerald-100 text-emerald-700 cursor-default"
-                                                    : "bg-amber-500 hover:bg-amber-600 text-white shadow-lg hover:shadow-amber-200"
+                                                    ? "cursor-default"
+                                                    : "text-white shadow-lg"
                                             }`}
+                                            style={savedRecipeIds.has(msg.id) ? {
+                                                backgroundColor: `${themeColors.primary}15`,
+                                                color: themeColors.primary
+                                            } : {
+                                                backgroundColor: themeColors.primary
+                                            }}
                                             >
                                             {savingRecipeId === msg.id ? (
                                                 <>
@@ -352,7 +364,7 @@ export default function ConsultationPage() {
                                 </div>
                             </div>
                             <div className="bg-slate-50 border border-slate-100 p-4 rounded-3xl rounded-tl-sm flex items-center gap-3 shadow-sm">
-                                <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+                                <Loader2 className="w-4 h-4 animate-spin" style={{ color: themeColors.primary }} />
                                 <span className="text-sm text-slate-600 font-medium">Sedang meracik ramuan...</span>
                             </div>
                         </motion.div>
@@ -368,7 +380,6 @@ export default function ConsultationPage() {
                             className="p-3 rounded-2xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors hidden sm:flex"
                             disabled={isLoading}
                         >
-                            <Sparkles className="w-5 h-5" />
                         </button>
                         <div className="flex-1 relative">
                             <input
@@ -377,12 +388,26 @@ export default function ConsultationPage() {
                                 onChange={(e) => setInput(e.target.value)}
                                 placeholder="Ketik keluhan Anda (contoh: batuk kering)..."
                                 disabled={isLoading}
-                                className="w-full pl-5 pr-14 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-emerald-100 focus:ring-4 focus:ring-emerald-50 outline-none transition-all text-slate-900 placeholder:text-slate-400 disabled:opacity-70 disabled:cursor-not-allowed font-medium"
+                                className="w-full pl-5 pr-14 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white outline-none transition-all text-slate-900 placeholder:text-slate-400 disabled:opacity-70 disabled:cursor-not-allowed font-medium"
+                                style={{
+                                    '--tw-ring-color': `${themeColors.primary}20`
+                                } as React.CSSProperties}
+                                onFocus={(e) => {
+                                    e.currentTarget.style.borderColor = `${themeColors.primary}30`
+                                    e.currentTarget.style.boxShadow = `0 0 0 4px ${themeColors.primary}10`
+                                }}
+                                onBlur={(e) => {
+                                    e.currentTarget.style.borderColor = 'transparent'
+                                    e.currentTarget.style.boxShadow = 'none'
+                                }}
                             />
                             <button
                                 type="submit"
                                 disabled={!input.trim() || isLoading}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-emerald-600 text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed hover:bg-emerald-700 transition-all shadow-lg hover:shadow-emerald-200 disabled:shadow-none"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all shadow-lg disabled:shadow-none"
+                                style={{
+                                    backgroundColor: !input.trim() || isLoading ? undefined : themeColors.primary
+                                }}
                             >
                                 <Send className="w-5 h-5" />
                             </button>
@@ -392,6 +417,7 @@ export default function ConsultationPage() {
             </motion.div>
         </div>
       </div>
-    </div>
+      </div>
+    </AuthGuard>
   );
 }

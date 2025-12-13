@@ -2,6 +2,7 @@
 
 import { motion, Variants } from "framer-motion"
 import { useTheme } from "../context/ThemeContext"
+import Link from "next/link"
 
 export default function ConsultationSection() {
   const { getThemeColors } = useTheme()
@@ -73,7 +74,9 @@ export default function ConsultationSection() {
               className="inline-flex items-center gap-3 px-8 py-4 rounded-full text-white transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group/btn"
               style={{ backgroundColor: themeColors.primary }}
             >
+              <Link href="/consultation">
               <span className="text-lg font-medium tracking-wide">Mulai Konsultasi</span>
+              </Link>
               <div className="bg-white/20 rounded-full p-1 group-hover/btn:translate-x-1 transition-transform">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

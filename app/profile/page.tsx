@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { updateProfile } from "@/services/userService";
+import { getUserPlants, Plant } from "@/services/plantService";
 import { auth } from "@/lib/firebase";
 import {
   ChevronLeft,
@@ -78,6 +79,10 @@ export default function ProfilePage() {
   const [provinceSearch, setProvinceSearch] = useState("");
   const [regencySearch, setRegencySearch] = useState("");
 
+  // State for user plants
+  const [userPlants, setUserPlants] = useState<Plant[]>([]);
+  const [isLoadingPlants, setIsLoadingPlants] = useState(true);
+
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -94,6 +99,25 @@ export default function ProfilePage() {
     };
     fetchProvinces();
   }, []);
+
+  // Fetch user plants
+  useEffect(() => {
+    const fetchPlants = async () => {
+      if (!user?.uid) {
+        setIsLoadingPlants(false);
+        return;
+      }
+      try {
+        const plants = await getUserPlants(user.uid);
+        setUserPlants(plants.slice(0, 3)); // Only take first 3
+      } catch (error) {
+        console.error("Error fetching plants:", error);
+      } finally {
+        setIsLoadingPlants(false);
+      }
+    };
+    fetchPlants();
+  }, [user]);
 
 
   useEffect(() => {
@@ -557,31 +581,69 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Plants Grid - Placeholder for now, will be populated with Firebase data */}
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-8 h-8 text-emerald-500" />
+            {/* Plants Grid */}
+            {isLoadingPlants ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <p className="text-base font-semibold text-slate-900 mb-2">
-                Belum ada tanaman herbal
-              </p>
-              <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">
-                Mulai tambahkan tanaman herbal favorit Anda dan kelola informasi lengkapnya
-              </p>
-              <button
-                onClick={() => router.push("/dashboardplant/add")}
-                className="px-6 py-3 text-white rounded-xl font-medium hover:shadow-lg transition-all"
-                style={{ backgroundColor: themeColors.primary }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = themeColors.accent)
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = themeColors.primary)
-                }
-              >
-                Tambah Tanaman Pertama
-              </button>
-            </div>
+            ) : userPlants.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {userPlants.map((plant) => (
+                  <div
+                    key={plant.id}
+                    onClick={() => router.push(`/dashboardplant/${plant.id}`)}
+                    className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100 cursor-pointer hover:shadow-lg transition-all group"
+                  >
+                    {/* Plant Image */}
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden mb-3 bg-white">
+                      {plant.imageUrl ? (
+                        <img
+                          src={plant.imageUrl}
+                          alt={plant.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-emerald-100">
+                          <Sprout className="w-10 h-10 text-emerald-400" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Plant Info */}
+                    <h4 className="font-bold text-slate-900 mb-1 truncate">{plant.name || "Tanaman"}</h4>
+                    <p className="text-xs text-emerald-600 font-medium mb-2">{plant.kind}</p>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <span className="px-2 py-0.5 bg-white rounded-full border border-slate-200">{plant.soilType || "Tanah"}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+                  <Plus className="w-8 h-8 text-emerald-500" />
+                </div>
+                <p className="text-base font-semibold text-slate-900 mb-2">
+                  Belum ada tanaman herbal
+                </p>
+                <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">
+                  Mulai tambahkan tanaman herbal favorit Anda dan kelola informasi lengkapnya
+                </p>
+                <button
+                  onClick={() => router.push("/dashboardplant/add")}
+                  className="px-6 py-3 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                  style={{ backgroundColor: themeColors.primary }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = themeColors.accent)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = themeColors.primary)
+                  }
+                >
+                  Tambah Tanaman Pertama
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

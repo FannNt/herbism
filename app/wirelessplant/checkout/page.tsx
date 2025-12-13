@@ -7,6 +7,7 @@ import { CreditCard, Wallet, Building2, CheckCircle, ArrowLeft, Shield, Clock } 
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import Navbar from "../../components/Navbar"
+import AuthGuard from "../../components/AuthGuard"
 import { db } from "@/lib/firebase"
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore"
 
@@ -164,8 +165,9 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      <Navbar />
+    <AuthGuard message="Silakan login untuk melanjutkan pembayaran">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        <Navbar />
       
       <section className="pt-32 pb-16 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
@@ -353,7 +355,8 @@ function CheckoutContent() {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </AuthGuard>
   )
 }
 

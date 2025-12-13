@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Navbar from "../../../components/Navbar"
+import AuthGuard from "../../../components/AuthGuard"
 import { db } from "@/lib/firebase"
 import { doc, getDoc } from "firebase/firestore"
 import type { PlanterProduct } from "@/services/planterService"
@@ -110,8 +111,9 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 text-slate-900">
-      <Navbar />
+    <AuthGuard message="Silakan login untuk melakukan pemesanan jasa planter">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 text-slate-900">
+        <Navbar />
       
       <section className="pt-28 pb-16 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
@@ -301,6 +303,7 @@ export default function CheckoutPage() {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </AuthGuard>
   )
 }

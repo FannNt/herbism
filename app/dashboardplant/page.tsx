@@ -9,6 +9,8 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { getUserPlants, deletePlant, Plant } from "@/services/plantService"
 import { auth } from "@/lib/firebase"
+import AuthGuard from "../components/AuthGuard"
+import Navbar from "../components/Navbar"
 
 export default function DashboardPlantPage() {
   const router = useRouter()
@@ -58,8 +60,12 @@ export default function DashboardPlantPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 relative">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <AuthGuard message="Silakan login untuk mengakses dashboard perawatan tanaman">
+      <div className="min-h-screen bg-slate-50 relative pb-24 md:pb-0">
+        {/* Navbar */}
+        <Navbar />
+        
+        <header className="bg-white border-b border-slate-200 sticky md:top-[88px] z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -230,6 +236,7 @@ export default function DashboardPlantPage() {
           </>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </AuthGuard>
   )
 }

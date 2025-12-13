@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { Package, Clock, CheckCircle, XCircle, Eye, MessageCircle, MapPin, Calendar, Sprout, ArrowLeft, Loader2, DollarSign } from "lucide-react"
 import Link from "next/link"
 import Navbar from "../../components/Navbar"
+import AuthGuard from "../../components/AuthGuard"
 import { db } from "@/lib/firebase"
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore"
 
@@ -69,7 +70,6 @@ export default function OrdersPage() {
   const { getThemeColors } = useTheme()
   const themeColors = getThemeColors()
   const { user } = useAuth()
-  const [filterStatus, setFilterStatus] = useState<string>('all')
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -102,17 +102,6 @@ export default function OrdersPage() {
     return () => unsubscribe()
   }, [user])
 
-  const filteredOrders = filterStatus === 'all' 
-    ? orders 
-    : orders.filter(order => order.status === filterStatus)
-
-  const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
-    processing: orders.filter(o => o.status === 'confirmed' || o.status === 'processing').length,
-    delivered: orders.filter(o => o.status === 'delivered').length
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
@@ -128,8 +117,9 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      <Navbar />
+    <AuthGuard message="Silakan login untuk melihat daftar pesanan Anda">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        <Navbar />
       
       <section className="pt-32 pb-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
@@ -149,80 +139,16 @@ export default function OrdersPage() {
               </motion.button>
             </Link>
             <h1 className="text-5xl md:text-6xl font-light text-slate-900 mb-4">
-              Orderan <span className="font-medium">Saya</span>
+              Riwayat <span className="font-medium">Orderan</span>
             </h1>
             <p className="text-xl text-slate-600">
-              Kelola dan pantau semua pesanan penanaman Anda
+              Pantau riwayat semua pesanan penanaman Anda
             </p>
-          </motion.div>
-
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
-          >
-            <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
-              <Package className="w-8 h-8 mx-auto mb-2" style={{ color: themeColors.primary }} />
-              <div className="text-3xl font-bold text-slate-900">{stats.total}</div>
-              <div className="text-sm text-slate-600">Total Order</div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
-              <Clock className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
-              <div className="text-3xl font-bold text-slate-900">{stats.pending}</div>
-              <div className="text-sm text-slate-600">Menunggu</div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
-              <Sprout className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-              <div className="text-3xl font-bold text-slate-900">{stats.processing}</div>
-              <div className="text-sm text-slate-600">Diproses</div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
-              <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-600" />
-              <div className="text-3xl font-bold text-slate-900">{stats.delivered}</div>
-              <div className="text-sm text-slate-600">Selesai</div>
-            </div>
-          </motion.div>
-
-          {/* Filter */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl p-4 shadow-sm mb-8"
-          >
-            <div className="flex flex-wrap gap-3">
-              {[
-                { value: 'all', label: 'Semua' },
-                { value: 'pending', label: 'Menunggu' },
-                { value: 'processing', label: 'Diproses' },
-                { value: 'delivered', label: 'Selesai' },
-                { value: 'cancelled', label: 'Dibatalkan' }
-              ].map((filter) => (
-                <motion.button
-                  key={filter.value}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setFilterStatus(filter.value)}
-                  className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                    filterStatus === filter.value
-                      ? 'text-white shadow-lg'
-                      : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                  style={filterStatus === filter.value ? {
-                    background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})`
-                  } : {}}
-                >
-                  {filter.label}
-                </motion.button>
-              ))}
-            </div>
           </motion.div>
 
           {/* Orders List */}
           <div className="space-y-6">
-            {filteredOrders.map((order, index) => {
+            {orders.map((order, index) => {
               const statusConfig = STATUS_CONFIG[order.status]
               const StatusIcon = statusConfig.icon
 
@@ -337,15 +263,15 @@ export default function OrdersPage() {
             })}
           </div>
 
-          {filteredOrders.length === 0 && (
+          {orders.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-center py-16"
             >
               <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <h3 className="text-2xl font-medium text-slate-900 mb-2">Tidak ada orderan</h3>
-              <p className="text-slate-600 mb-6">Belum ada orderan dengan status ini</p>
+              <h3 className="text-2xl font-medium text-slate-900 mb-2">Belum ada orderan</h3>
+              <p className="text-slate-600 mb-6">Anda belum memiliki riwayat pesanan</p>
               <Link href="/wirelessplant">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -360,6 +286,7 @@ export default function OrdersPage() {
           )}
         </div>
       </section>
-    </div>
+      </div>
+    </AuthGuard>
   )
 }

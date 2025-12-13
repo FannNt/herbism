@@ -9,6 +9,7 @@ import {
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Navbar from "../../../components/Navbar"
+import AuthGuard from "../../../components/AuthGuard"
 import { db } from "@/lib/firebase"
 import { 
   doc, getDoc, setDoc, collection, addDoc, query, orderBy, 
@@ -269,8 +270,9 @@ export default function ChatPlanterPage() {
   const isPlanter = user?.uid === params.planterId
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      <Navbar />
+    <AuthGuard message="Silakan login untuk chat dengan planter">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        <Navbar />
       
       <section className="pt-20 pb-0 h-screen flex flex-col">
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col">
@@ -440,6 +442,7 @@ export default function ChatPlanterPage() {
           </motion.form>
         </div>
       </section>
-    </div>
+      </div>
+    </AuthGuard>
   )
 }

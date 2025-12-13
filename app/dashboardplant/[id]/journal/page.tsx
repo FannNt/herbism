@@ -266,7 +266,7 @@ export default function JournalPage() {
           <div className="absolute inset-x-4 bottom-0 h-8 bg-gradient-to-t from-amber-200/50 to-transparent rounded-b-3xl blur-xl" />
           {/* isi buku */}
           <div className="relative bg-amber-800 rounded-2xl p-2 shadow-2xl">
-            <div className="flex flex-col md:flex-row bg-amber-50 rounded-xl overflow-hidden min-h-[500px] md:min-h-[600px] relative">
+            <div className="flex flex-col md:flex-row bg-amber-50 rounded-xl overflow-hidden h-auto md:h-[700px] relative">
 
               {/* Left page */}
               <AnimatePresence mode="wait">
@@ -291,7 +291,8 @@ export default function JournalPage() {
                   />
 
                   {leftEntry ? (
-                    <div className="relative z-10">
+                    <div className="relative z-10 h-full flex flex-col">
+                      <div className="flex-1 h-[450px] md:h-full overflow-y-auto pr-2 md:pr-3 scrollbar-thin scrollbar-thumb-amber-200 scrollbar-track-transparent pb-10">
                       {/* Header */}
                       <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
@@ -341,47 +342,59 @@ export default function JournalPage() {
                       {/* AI Feedback Section */}
                       <div className="mt-6">
                         {leftEntry.aiFeedback ? (
-                          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-4 border-2 border-purple-200">
+                          <div 
+                            className="rounded-xl p-4 border-2"
+                            style={{ 
+                              background: `linear-gradient(135deg, ${themeColors.primary}10, ${themeColors.secondary}10)`,
+                              borderColor: `${themeColors.primary}30`
+                            }}
+                          >
                             <div className="flex items-center gap-2 mb-2">
-                              <Sparkles className="w-4 h-4 text-purple-600" />
-                              <h4 className="text-sm font-bold text-purple-900">Feedback dari Erbis</h4>
+                              <Sparkles className="w-4 h-4" style={{ color: themeColors.primary }} />
+                              <h4 className="text-sm font-bold" style={{ color: themeColors.primary }}>Feedback dari Erbis</h4>
                             </div>
-                            <p className="text-sm text-purple-800 leading-relaxed">
+                            <p className="text-sm leading-relaxed text-slate-700">
                               {leftEntry.aiFeedback}
                             </p>
                           </div>
                         ) : leftEntry.feedbackData ? (
-                          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border-2 border-purple-200 space-y-4">
+                          <div 
+                            className="rounded-xl p-5 border-2 space-y-4"
+                            style={{ 
+                              background: `linear-gradient(135deg, ${themeColors.primary}10, ${themeColors.secondary}10)`,
+                              borderColor: `${themeColors.primary}30`
+                            }}
+                          >
                             {/* Header */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                                  <Sparkles className="w-4 h-4 text-purple-600" />
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${themeColors.primary}20` }}>
+                                  <Sparkles className="w-4 h-4" style={{ color: themeColors.primary }} />
                                 </div>
-                                <h4 className="text-sm font-bold text-purple-900">Analisis Erbis</h4>
+                                <h4 className="text-sm font-bold" style={{ color: themeColors.primary }}>Analisis Erbis</h4>
                               </div>
                               <div className="flex gap-0.5">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <Star
                                     key={star}
-                                    className={`w-4 h-4 ${star <= leftEntry.feedbackData!.growthRating ? "fill-amber-400 text-amber-400" : "text-purple-200"}`}
+                                    className={`w-4 h-4 ${star <= leftEntry.feedbackData!.growthRating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`}
                                   />
                                 ))}
                               </div>
                             </div>
 
                             {/* Summary */}
-                            <p className="text-sm text-purple-900 font-medium leading-relaxed">
+                            <p className="text-sm font-medium leading-relaxed" style={{ color: themeColors.primary }}>
                               "{leftEntry.feedbackData.summary}"
                             </p>
 
                             {/* Tips */}
                             <div className="bg-white/60 rounded-lg p-3 space-y-2">
-                              <p className="text-xs font-bold text-purple-800 uppercase tracking-wider">Saran Perawatan:</p>
+                              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: themeColors.primary }}>Saran Perawatan:</p>
                               <ul className="space-y-1.5">
                                 {leftEntry.feedbackData.tips.map((tip, i) => (
-                                  <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-purple-800">
-                                    <span className="text-purple-500 mt-0.5">•</span>
+                                  <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-700">
+                                    <span className="mt-0.5" style={{ color: themeColors.primary }}>•</span>
                                     <span>{tip}</span>
                                   </li>
                                 ))}
@@ -392,11 +405,16 @@ export default function JournalPage() {
                           <button
                             onClick={() => handleRequestFeedback(leftEntryIndex)}
                             disabled={loadingFeedback === leftEntryIndex}
-                            className="w-full py-3 px-4 rounded-xl border-2 border-purple-200 border-dashed hover:border-purple-400 bg-purple-50 hover:bg-purple-100 flex items-center justify-center gap-2 text-purple-700 font-medium transition-all group"
+                            className="w-full py-3 px-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 font-medium transition-all group"
+                            style={{ 
+                              borderColor: `${themeColors.primary}40`,
+                              color: themeColors.primary,
+                              backgroundColor: `${themeColors.primary}05`
+                            }}
                           >
                             {loadingFeedback === leftEntryIndex ? (
                               <>
-                                <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: themeColors.primary, borderTopColor: 'transparent' }} />
                                 <span>Menganalisis...</span>
                               </>
                             ) : (
@@ -408,6 +426,7 @@ export default function JournalPage() {
                           </button>
                         )}
                       </div>
+                    </div>
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center text-amber-300">
@@ -445,7 +464,8 @@ export default function JournalPage() {
                   />
 
                   {rightEntry ? (
-                    <div className="relative z-10">
+                    <div className="relative z-10 h-full flex flex-col">
+                      <div className="flex-1 overflow-visible md:overflow-y-auto pr-0 md:pr-3 scrollbar-thin scrollbar-thumb-amber-200 scrollbar-track-transparent pb-10">
                       <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                           <div
@@ -492,47 +512,59 @@ export default function JournalPage() {
                       {/* AI Feedback Section */}
                       <div className="mt-6">
                         {rightEntry.aiFeedback ? (
-                          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-4 border-2 border-purple-200">
+                          <div 
+                            className="rounded-xl p-4 border-2"
+                            style={{ 
+                              background: `linear-gradient(135deg, ${themeColors.primary}10, ${themeColors.secondary}10)`,
+                              borderColor: `${themeColors.primary}30`
+                            }}
+                          >
                             <div className="flex items-center gap-2 mb-2">
-                              <Sparkles className="w-4 h-4 text-purple-600" />
-                              <h4 className="text-sm font-bold text-purple-900">Feedback dari Erbis</h4>
+                              <Sparkles className="w-4 h-4" style={{ color: themeColors.primary }} />
+                              <h4 className="text-sm font-bold" style={{ color: themeColors.primary }}>Feedback dari Erbis</h4>
                             </div>
-                            <p className="text-sm text-purple-800 leading-relaxed">
+                            <p className="text-sm leading-relaxed text-slate-700">
                               {rightEntry.aiFeedback}
                             </p>
                           </div>
                         ) : rightEntry.feedbackData ? (
-                          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border-2 border-purple-200 space-y-4">
+                          <div 
+                            className="rounded-xl p-5 border-2 space-y-4"
+                            style={{ 
+                              background: `linear-gradient(135deg, ${themeColors.primary}10, ${themeColors.secondary}10)`,
+                              borderColor: `${themeColors.primary}30`
+                            }}
+                          >
                             {/* Header */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                                  <Sparkles className="w-4 h-4 text-purple-600" />
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${themeColors.primary}20` }}>
+                                  <Sparkles className="w-4 h-4" style={{ color: themeColors.primary }} />
                                 </div>
-                                <h4 className="text-sm font-bold text-purple-900">Analisis Erbis</h4>
+                                <h4 className="text-sm font-bold" style={{ color: themeColors.primary }}>Analisis Erbis</h4>
                               </div>
                               <div className="flex gap-0.5">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <Star
                                     key={star}
-                                    className={`w-4 h-4 ${star <= rightEntry.feedbackData!.growthRating ? "fill-amber-400 text-amber-400" : "text-purple-200"}`}
+                                    className={`w-4 h-4 ${star <= rightEntry.feedbackData!.growthRating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`}
                                   />
                                 ))}
                               </div>
                             </div>
 
                             {/* Summary */}
-                            <p className="text-sm text-purple-900 font-medium leading-relaxed">
+                            <p className="text-sm font-medium leading-relaxed" style={{ color: themeColors.primary }}>
                               "{rightEntry.feedbackData.summary}"
                             </p>
 
                             {/* Tips */}
                             <div className="bg-white/60 rounded-lg p-3 space-y-2">
-                              <p className="text-xs font-bold text-purple-800 uppercase tracking-wider">Saran Perawatan:</p>
+                              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: themeColors.primary }}>Saran Perawatan:</p>
                               <ul className="space-y-1.5">
                                 {rightEntry.feedbackData.tips.map((tip, i) => (
-                                  <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-purple-800">
-                                    <span className="text-purple-500 mt-0.5">•</span>
+                                  <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-700">
+                                    <span className="mt-0.5" style={{ color: themeColors.primary }}>•</span>
                                     <span>{tip}</span>
                                   </li>
                                 ))}
@@ -543,11 +575,16 @@ export default function JournalPage() {
                           <button
                             onClick={() => handleRequestFeedback(rightEntryIndex)}
                             disabled={loadingFeedback === rightEntryIndex}
-                            className="w-full py-3 px-4 rounded-xl border-2 border-purple-200 border-dashed hover:border-purple-400 bg-purple-50 hover:bg-purple-100 flex items-center justify-center gap-2 text-purple-700 font-medium transition-all group"
+                            className="w-full py-3 px-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 font-medium transition-all group"
+                            style={{ 
+                              borderColor: `${themeColors.primary}40`,
+                              color: themeColors.primary,
+                              backgroundColor: `${themeColors.primary}05`
+                            }}
                           >
                             {loadingFeedback === rightEntryIndex ? (
                               <>
-                                <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: themeColors.primary, borderTopColor: 'transparent' }} />
                                 <span>Menganalisis...</span>
                               </>
                             ) : (
@@ -559,6 +596,7 @@ export default function JournalPage() {
                           </button>
                         )}
                       </div>
+                    </div>
                     </div>
                   ) : (
                     <div className="h-full flex items-center justify-center text-amber-300">

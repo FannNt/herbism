@@ -1,21 +1,32 @@
 "use client"
 
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useTheme } from "../context/ThemeContext"
 import { useAuth } from "../context/AuthContext"
 import { logout } from "@/services/authService"
 import { Home, MessageCircle, ScanLine, Sprout, Users, User, Leaf, ShieldAlert, LogOut, Settings, Shield, Package } from "lucide-react"
 import HerbismLogo from "./HerbismLogo"
 
+// Route to section ID mapping
+const routeToSectionMap: Record<string, string> = {
+  '/': 'home',
+  '/consultation': 'konsultasi',
+  '/dashboardplant': 'rawat',
+  '/wirelessplant': 'wireless',
+  '/manfaat-tanaman': 'scan',
+  '/diagnosa-tanaman': 'scan',
+  '/profile': 'akun',
+}
+
 export default function Navbar() {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, loading } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
-  const [activeSection, setActiveSection] = useState("home")
   const [showScanDropdown, setShowScanDropdown] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showMobileScanMenu, setShowMobileScanMenu] = useState(false)
@@ -23,6 +34,25 @@ export default function Navbar() {
   const { scrollY } = useScroll()
   const navbarOpacity = useTransform(scrollY, [0, 100], [0.95, 1])
   const { getThemeColors } = useTheme()
+
+  // Determine active section based on current pathname
+  const activeSection = useMemo(() => {
+    // Exact match first
+    if (routeToSectionMap[pathname]) {
+      return routeToSectionMap[pathname]
+    }
+    
+    // Check for partial matches (for nested routes like /dashboardplant/[id])
+    if (pathname.startsWith('/dashboardplant')) return 'rawat'
+    if (pathname.startsWith('/wirelessplant')) return 'wireless'
+    if (pathname.startsWith('/consultation')) return 'konsultasi'
+    if (pathname.startsWith('/manfaat-tanaman')) return 'scan'
+    if (pathname.startsWith('/diagnosa-tanaman')) return 'scan'
+    if (pathname.startsWith('/profile')) return 'akun'
+    if (pathname.startsWith('/saved-recipes')) return 'akun'
+    
+    return 'home'
+  }, [pathname])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -64,20 +94,27 @@ export default function Navbar() {
     { id: "dashboard", label: "Dashboard Akun", icon: User, description: "Profil & pengaturan" }
   ]
 
-  const scrollToSection = (sectionId: string) => {
-    setActiveSection(sectionId)
+  // Route map for navigation
+  const sectionRoutes: Record<string, string> = {
+    'home': '/',
+    'konsultasi': '/consultation',
+    'rawat': '/dashboardplant',
+    'wireless': '/wirelessplant',
+    'scan-manfaat': '/manfaat-tanaman',
+    'scan-penyakit': '/diagnosa-tanaman',
+    'dashboard': '/profile',
+    'akun': '/profile',
+    'orders': '/wirelessplant/orders'
+  }
+
+  const navigateTo = (sectionId: string) => {
     setShowMobileScanMenu(false)
     setShowMobileAkunMenu(false)
     
-    if (sectionId === 'home') router.push('/')
-    if (sectionId === 'konsultasi') router.push('/consultation')
-    if (sectionId === 'rawat') router.push('/dashboardplant')
-    if (sectionId === 'wireless') router.push('/wirelessplant')
-    if (sectionId === 'scan-manfaat') router.push('/manfaat-tanaman')
-    if (sectionId === 'scan-penyakit') router.push('/diagnosa-tanaman')
-    if (sectionId === 'dashboard') router.push('/profile')
-    if (sectionId === 'akun') router.push('/profile')
-    if (sectionId === 'orders') router.push('/wirelessplant/orders')
+    const route = sectionRoutes[sectionId]
+    if (route) {
+      router.push(route)
+    }
   }
 
   const themeColors = getThemeColors()
@@ -125,7 +162,7 @@ export default function Navbar() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.1 * index }}
-                    onClick={() => !item.hasDropdown && scrollToSection(item.id)}
+                    onClick={() => !item.hasDropdown && navigateTo(item.id)}
                     className="relative px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300"
                     style={{
                       color: activeSection === item.id ? "white" : isScrolled ? "#475569" : "#334155"
@@ -167,7 +204,7 @@ export default function Navbar() {
                           {scanOptions.map((option, idx) => (
                             <motion.button
                               key={option.id}
-                              onClick={() => scrollToSection(option.id)}
+                              onClick={() => navigateTo(option.id)}
                               className="w-full px-5 py-4 flex items-start gap-4 transition-all duration-200"
                               whileHover={{ x: 6 }}
                               style={{
@@ -378,7 +415,7 @@ export default function Navbar() {
                   {scanOptions.map((option, idx) => (
                     <motion.button
                       key={option.id}
-                      onClick={() => scrollToSection(option.id)}
+                      onClick={() => navigateTo(option.id)}
                       className="w-full px-4 py-4 flex items-center gap-4 rounded-2xl transition-all duration-200"
                       whileTap={{ scale: 0.98 }}
                       style={{
@@ -428,7 +465,7 @@ export default function Navbar() {
                   {akunOptions.map((option, idx) => (
                     <motion.button
                       key={option.id}
-                      onClick={() => scrollToSection(option.id)}
+                      onClick={() => navigateTo(option.id)}
                       className="w-full px-4 py-4 flex items-center gap-4 rounded-2xl transition-all duration-200"
                       whileTap={{ scale: 0.98 }}
                       style={{
@@ -473,7 +510,7 @@ export default function Navbar() {
                         onClick={() => {
                           setShowMobileScanMenu(false)
                           setShowMobileAkunMenu(false)
-                          scrollToSection(item.id)
+                          navigateTo(item.id)
                         }}
                         whileTap={{ scale: 0.9 }}
                         className="relative flex flex-col items-center gap-1 py-2 px-3"
@@ -571,7 +608,7 @@ export default function Navbar() {
                           } else {
                             setShowMobileScanMenu(false)
                             setShowMobileAkunMenu(false)
-                            scrollToSection(item.id)
+                            navigateTo(item.id)
                           }
                         }}
                         whileTap={{ scale: 0.9 }}
