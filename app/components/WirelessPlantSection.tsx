@@ -1,7 +1,7 @@
 "use client"
 import { motion, type Variants } from "framer-motion"
 import { useTheme } from "../context/ThemeContext"
-import { Sprout, Video, IdCard } from "lucide-react"
+import { Sprout, MessageCircle, IdCard } from "lucide-react"
 import Link from "next/link"
 
   export default function WirelessPlantSection() {
@@ -99,11 +99,11 @@ import Link from "next/link"
                   className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
                   style={{ backgroundColor: `${themeColors.primary}20` }}
                 >
-                  <Video className="text-2xl text-green-900"/>
+                  <MessageCircle className="text-2xl text-green-900"/>
                 </div>
-                <h3 className="text-xl font-medium text-slate-900 mb-2">Video Call Langsung</h3>
+                <h3 className="text-xl font-medium text-slate-900 mb-2">Komunikasi Chat</h3>
                 <p className="text-slate-600 text-sm font-light leading-relaxed">
-                  Konsultasi langsung dengan petani ahli melalui video call terintegrasi di platform
+                  Berkomunikasi dengan petani ahli melalui fitur chat terintegrasi untuk memantau perkembangan tanaman
                 </p>
               </div>
             </motion.div>
